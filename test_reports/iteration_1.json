@@ -1,0 +1,38 @@
+{
+  "summary": "First backend test iteration for AINTRIX Global API. All 34 pytest cases pass covering health, public reads (jobs/articles/research/article-by-slug), public writes (contacts/investor-leads/careers/internships), file upload (PDF accept + non-PDF/DOC reject), investor deck PDF generation, auth (login success/fail, /auth/me with & without token), admin stats + list endpoints (all 6), admin article full CRUD w/ duplicate-slug guard, admin job create/delete, and auth boundary checks on every /api/admin/* route.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "CORS", "issue": "backend/.env sets CORS_ORIGINS='*' and FRONTEND_URL='*' but server.py hardcodes allow_origins=['*'] with allow_credentials=False. Env values are unused. Non-blocking now but should be wired for future cookie-based auth."},
+      {"endpoint": "/api/uploads/resume", "issue": "Extension check only — no MIME sniffing or file-size cap. Acceptable for MVP but consider magic-byte validation + max size."},
+      {"endpoint": "/api/articles/{slug}", "issue": "Review request listed slug 'aintrix-craft' which does not exist; actual seeded slug is 'aintrix-manifesto-century-of-compound-innovation'. Tested against the real slug — passes. Just a spec typo in the request."}
+    ]
+  },
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/backend_test.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py is 670 lines — approaching size threshold; consider splitting into routers/ (auth, public, admin, uploads) + services/pdf.py for maintainability.",
+    "Startup uses deprecated @app.on_event('startup') — migrate to FastAPI lifespan context manager.",
+    "PUT /api/admin/articles/{id} does not guard against slug collisions when a user changes slug to another existing article's slug — could break the unique index at write time with a 500. Add duplicate-slug check like POST does.",
+    "ObjectId(article_id) / ObjectId(job_id) can raise bson.errors.InvalidId returning 500 on malformed IDs — wrap and 400.",
+    "verify_password swallows all exceptions silently; ok for MVP but log at debug level.",
+    "No rate limiting on /api/auth/login (brute-force) or /api/contacts (spam). Playbook expects brute-force lockout after 5 fails — not implemented.",
+    "JWT stored client-side only via bearer header — playbook mentions httpOnly cookies + CORS allow_credentials; current setup uses bearer + wildcard CORS. Fine for admin panel but note the deviation.",
+    "GET /api/uploads/resume/{fid} is public — any file uploaded is retrievable by UUID without auth. Consider gating behind admin token or signed URLs."
+  ],
+  "updated_files": [
+    "/app/backend/tests/backend_test.py",
+    "/app/memory/test_credentials.md"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "not tested (backend-only run)"},
+  "test_credentials": "admin@aintrix.com / Aintrix@2026 (also saved to /app/memory/test_credentials.md)",
+  "seed_data_creation": "None — relied on startup seed (admin user, 5 jobs, 3 articles, 4 research posts). Test-created articles/jobs are cleaned up in the CRUD test. Test-prefixed contacts/leads/applications remain in DB.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Backend is fully green. Reusable pytest file at /app/backend/tests/backend_test.py — run with: pytest /app/backend/tests/backend_test.py -v. Uses REACT_APP_BACKEND_URL from env. Admin creds live in /app/memory/test_credentials.md. If admin CRUD tests are run repeatedly, they self-clean their 'test-article-crud-2026' article and TEST job. No frontend tests written yet.",
+  "rca of the issue": "N/A — all tests pass."
+}
