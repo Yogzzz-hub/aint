@@ -1,0 +1,185 @@
+{
+  "theme": "Pure Monochrome Corporate",
+  "project_name": "AINTRIX Global Private Limited",
+  "typography": {
+    "primary": {
+      "family": "Cabinet Grotesk",
+      "usage": "Display, Hero, H1, H2, H3, Massive Editorial Quotes",
+      "weights": "Variable (from Light to Extrabold for kinetic scroll animations)",
+      "letter_spacing": "tracking-tighter to tracking-tight (-0.02em to -0.05em)"
+    },
+    "secondary": {
+      "family": "Geist",
+      "usage": "Body, Captions, UI Elements, Data Tables, Forms",
+      "weights": "Light (300), Regular (400), Medium (500)",
+      "letter_spacing": "tracking-normal (0em)"
+    },
+    "scale": {
+      "hero": "text-6xl sm:text-7xl md:text-[8vw] leading-[0.9] tracking-tighter",
+      "h1": "text-5xl sm:text-6xl md:text-7xl leading-none tracking-tighter",
+      "h2": "text-4xl sm:text-5xl leading-[1.1] tracking-tight",
+      "h3": "text-2xl sm:text-3xl leading-[1.2]",
+      "body": "text-base sm:text-lg leading-relaxed text-gray-400",
+      "caption": "text-xs sm:text-sm uppercase tracking-[0.2em] font-medium"
+    },
+    "kinetic_scroll_effect": {
+      "description": "Progressive font weight increase on scroll (Light -> Extrabold)",
+      "implementation": "Animate 'font-variation-settings: \"wght\" [value]' using GSAP ScrollTrigger with scrub. Do NOT animate standard 'font-weight' property to maintain 60fps and GPU composite.",
+      "best_practice": "Split text into words using splitType or SplitText, then iterate over words to stagger the font variation wght axis based on scroll progress."
+    }
+  },
+  "colors": {
+    "background": {
+      "primary_dark": "#000000",
+      "primary_light": "#FFFFFF",
+      "surface_dark": "#0A0A0A",
+      "surface_medium": "#111111"
+    },
+    "text": {
+      "primary_dark": "#FFFFFF",
+      "secondary_dark": "#A6A6A6",
+      "primary_light": "#000000",
+      "secondary_light": "#555555"
+    },
+    "borders": {
+      "subtle_dark": "#2A2A2A",
+      "subtle_light": "#E5E5E5"
+    },
+    "accents": {
+      "pure_white": "#FFFFFF",
+      "pure_black": "#000000",
+      "hover_glow": "rgba(255, 255, 255, 0.1)"
+    },
+    "rules": [
+      "NO GRADIENTS. Stick purely to solid monochrome values.",
+      "Use #A6A6A6 for body text on dark mode to prevent eye strain.",
+      "Use #2A2A2A for 1px structural borders and dividers.",
+      "Never use pure transparent backgrounds for overlays. Use solid #000000 or backdrop-blur with a dark/light tint."
+    ]
+  },
+  "spacing_and_grids": {
+    "whitespace_philosophy": "Apple-level generous whitespace. Empty space is structural.",
+    "scale": {
+      "section_padding": "py-24 md:py-32 lg:py-48",
+      "container_gap": "gap-8 md:gap-16 lg:gap-32",
+      "element_gap": "gap-4 md:gap-8"
+    },
+    "grid_system": {
+      "base": "grid-cols-1 md:grid-cols-12",
+      "asymmetric_rule": "Avoid perfect symmetry. E.g., Left col-span-4 for heading, right col-span-7 (with 1 col offset) for massive typography quote or image.",
+      "alignment": "Strictly left-aligned text for body. Headings can span entire grid."
+    }
+  },
+  "layouts": {
+    "hero": "Cinematic WebGL canvas covering 100vw/100vh. Minimal overlaying text. Floating 3D abstract object responding to mouse.",
+    "ecosystem_cards": "Alternating bento grid (col-span-8 and col-span-4 combinations). Each card has a 1px #2A2A2A border, pure black background, hovering spotlight effect.",
+    "timeline": "Vertical strict structural line. Years massive on the left, descriptive text on the right.",
+    "manifesto": "Massive typography (10vw) spanning full width. Progressive bold kinetic effect on scroll.",
+    "navigation": "Minimal top bar. Hidden mega-menu or overlay menu. No hamburger on desktop, show links.",
+    "admin_dashboard": "High-density functional grid. #0A0A0A background, #2A2A2A borders. Tabular data strictly left-aligned."
+  },
+  "components": {
+    "buttons": {
+      "style": "Pill-shaped or sharp rectangular variants. 1px border. Monochrome inverted on hover.",
+      "motion": "Magnetic effect on hover (Framer Motion / GSAP). Custom cursor snapping."
+    },
+    "cards": {
+      "style": "Flat solid pure black or #0A0A0A backgrounds with #2A2A2A borders.",
+      "motion": "3D tilt on hover (using react-parallax-tilt or framer-motion), internal mouse spotlight gradient (radial-gradient of rgba(255,255,255,0.1))."
+    },
+    "forms": {
+      "style": "Editorial line inputs. No bounding boxes. border-b border-[#2A2A2A] bg-transparent text-white focus:border-white transition-colors. Padding only on bottom."
+    }
+  },
+  "visual_enhancers": {
+    "film_grain": "Fixed full-screen div with pointer-events-none and a repeating SVG noise pattern, opacity 0.03 - 0.05. Gives a tactile cinematic feel.",
+    "custom_cursor": "Small white dot (mix-blend-mode: difference). Expands on hover over links/buttons or images.",
+    "mask_reveals": "Images and massive text should reveal using CSS clip-path or overflow-hidden wrappers on scroll."
+  },
+  "motion": {
+    "scroll": "MANDATORY: Lenis smooth scroll for momentum and weight.",
+    "page_transitions": "Black screen wipe or fade-up sequence.",
+    "split_text": "Use SplitType for headings. Staggered reveal of characters/words with cubic-bezier(0.16, 1, 0.3, 1) ease.",
+    "stagger_animations": "List items (Ecosystem, Careers) must animate in with a 50-100ms stagger on scroll entry."
+  },
+  "3d_libraries": {
+    "hero_webgl": {
+      "library": "@react-three/fiber and @react-three/drei",
+      "implementation": "Render a dark, glossy, morphing abstract geometric shape or particles. Must use <Environment preset=\"city\" /> with low intensity and directional lighting to highlight edges. Background must be transparent to blend with #000000."
+    }
+  },
+  "image_urls": {
+    "hero_and_abstract": [
+      {
+        "url": "https://images.unsplash.com/photo-1698429894841-64b7d0396aa7?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2MDV8MHwxfHNlYXJjaHwxfHxhYnN0cmFjdCUyMGdlb21ldHJpYyUyMDNkJTIwbW9ub2Nocm9tZXxlbnwwfHx8fDE3ODQ1NTgzMzN8MA&ixlib=rb-4.1.0&q=85",
+        "description": "Abstract monochrome wavy lines (good for hero fallback or deep tech background)"
+      },
+      {
+        "url": "https://images.pexels.com/photos/13978499/pexels-photo-13978499.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "description": "Stunning 3D abstract geometric shapes in monochrome"
+      }
+    ],
+    "robotics_and_ai": [
+      {
+        "url": "https://images.pexels.com/photos/29054364/pexels-photo-29054364.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "description": "Futuristic metallic robot arm in black and white"
+      },
+      {
+        "url": "https://images.pexels.com/photos/29054365/pexels-photo-29054365.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "description": "Close-up robotic arm showcasing AI"
+      }
+    ],
+    "semiconductors_and_tech": [
+      {
+        "url": "https://images.unsplash.com/photo-1763372278600-fd0b0997a7b8?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxODF8MHwxfHNlYXJjaHwzfHxzZW1pY29uZHVjdG9yJTIwbWljcm9jaGlwJTIwY2xvc2UlMjB1cCUyMG1vbm9jaHJvbWV8ZW58MHx8fHwxNzg0NTU4MzE4fDA&ixlib=rb-4.1.0&q=85",
+        "description": "Close-up of an electronic component (Pulse H1102NL) macro monochrome"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1561972465-05c968dc2c91?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxODF8MHwxfHNlYXJjaHwxfHxzZW1pY29uZHVjdG9yJTIwbWljcm9jaGlwJTIwY2xvc2UlMjB1cCUyMG1vbm9jaHJvbWV8ZW58MHx8fHwxNzg0NTU4MzE4fDA&ixlib=rb-4.1.0&q=85",
+        "description": "Micro processor chip in pure black and white"
+      }
+    ],
+    "industrial_and_logistics": [
+      {
+        "url": "https://images.unsplash.com/photo-1780273035805-9c3f782af91a?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NjZ8MHwxfHNlYXJjaHwxfHxpbmR1c3RyaWFsJTIwZW5naW5lZXJpbmclMjBtb25vY2hyb21lfGVufDB8fHx8MTc4Mjk2MTk4NXww&ixlib=rb-4.1.0&q=85",
+        "description": "Silhouetted industrial metal structure"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1629709305577-1cf7b1441b8d?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NjZ8MHwxfHNlYXJjaHwyfHxpbmR1c3RyaWFsJTIwZW5naW5lZXJpbmclMjBtb25vY2hyb21lfGVufDB8fHx8MTc4Mjk2MTk4NXww&ixlib=rb-4.1.0&q=85",
+        "description": "Macro shot of industrial mechanical engine parts in grayscale"
+      }
+    ]
+  },
+  "accessibility": {
+    "contrast": "Ensure text over pure black meets APCA standards. Use #FFFFFF for primary text, #A6A6A6 for secondary text.",
+    "reduced_motion": "Wrap kinetic typography and WebGL initializations in prefers-reduced-motion checks. Provide static fallbacks.",
+    "testing_attributes": "All interactive elements, buttons, and form inputs MUST include data-testid attributes (e.g., data-testid=\"hero-cta-button\")."
+  },
+  "instructions_to_main_agent": [
+    "You are building a production-ready website using React (.jsx / .js files), Tailwind CSS, and Framer Motion / GSAP.",
+    "DO NOT use .tsx. The stack is Javascript.",
+    "Install and setup @studio-freight/react-lenis for smooth scrolling.",
+    "Install gsap and @gsap/react for scroll storytelling and kinetic text weight animations.",
+    "Install @react-three/fiber and @react-three/drei for the 3D WebGL hero background.",
+    "Install lucide-react or @phosphor-icons/react for minimalist line icons.",
+    "Do NOT use pre-built generic templates. Every section must be manually crafted using raw HTML tags for layout to allow precise GSAP control.",
+    "For the Admin Dashboard, use shadcn/ui components but strip away their default look to match the flat, pure monochrome, 1px border aesthetic.",
+    "Use CSS Grid heavily. Rely on gap-8 to gap-32. Do not cram elements.",
+    "Implement a global noise overlay (pointer-events: none) across the entire application for cinematic film grain.",
+    "For progressive bold text on scroll, bind GSAP ScrollTrigger to 'font-variation-settings': '\"wght\"' in inline styles to interpolate weight."
+  ],
+  "UNIVERSAL GUIDELINES FOR MAIN AGENT": [
+    "You tend to converge toward generic, 'on distribution' outputs. Avoid this: make creative, distinctive frontends that surprise and delight.",
+    "Dark colors look good when used independently without gradients. DO NOT use dark colors as gradients.",
+    "Don't make generic centered layouts, simplistic gradients, and uniform styling.",
+    "Create depth through layered design elements with z-index hierarchy and subtle #2A2A2A borders.",
+    "You MUST NOT apply universal transition (e.g., transition: all). It breaks GSAP and Framer Motion transforms.",
+    "You MUST NOT center align the app container. No '.App { text-align: center; }'. Keep natural reading flow.",
+    "Always use modern button styles like pill-shaped, or sharp button with magnetic interaction animations.",
+    "NEVER use AI assistant Emoji characters (like robot/brain emojis) for icons. Use clean SVG icons.",
+    "Every interaction needs micro-animations - hover states, custom cursors, parallax effects. Static = dead.",
+    "Use 2-3x more spacing than feels comfortable. Cramped designs look cheap.",
+    "Missing categories = main agent will use placeholder text which is FORBIDDEN. Always use the provided image URLs.",
+    "All interactive and key informational elements MUST include a data-testid attribute to facilitate robust automated testing."
+  ]
+}
