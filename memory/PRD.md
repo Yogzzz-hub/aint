@@ -57,7 +57,9 @@ Pages: Home, About, Ecosystem (8 divisions), Research, Internships, Careers, New
 - Admin: `GET /admin/stats`, `GET /admin/{collection}`, full CRUD on articles + jobs
 - Startup seeds admin user (idempotent), 5 demo jobs, 3 demo articles, 4 research posts
 
-## What's Been Implemented (2026-07-20)
+## What's Been Implemented
+
+### v1 (2026-07-20)
 - ✅ Full frontend scaffold (React 18 + CRACO + Tailwind) from scratch
 - ✅ 11 pages with cinematic monochrome design, editorial typography, WebGL hero
 - ✅ Full FastAPI backend (~670 lines) with JWT auth, all CRUD endpoints, PDF generator
@@ -67,6 +69,18 @@ Pages: Home, About, Ecosystem (8 divisions), Research, Internships, Careers, New
 - ✅ 34/34 backend tests passing (`/app/test_reports/iteration_1.json`)
 - ✅ SEO meta + OpenGraph + Twitter cards in `public/index.html`
 - ✅ Design tokens honor `/app/design_guidelines.json`
+
+### v2 — Awwwards Cinematic Transformation (2026-07-20)
+- ✅ **Cinematic loader** — AINTRIX letters assemble from split positions with blur/rotate, light sweep, progress bar, corner meta
+- ✅ **PersistentScene.jsx** — one fixed WebGL canvas spanning the entire home page. Camera dollies + orbits driven by scroll. Same sculpture morphs across chapters: chrome distort → wireframe overlay → glass torus knot → dense sphere → particle dispersion. No section local canvases.
+- ✅ **scrollStore.js (Zustand)** — global scroll signal (progress, velocity, section, loaded) updated every frame by Lenis in App.js. Read by scene, atmosphere, cursor, typography.
+- ✅ **SceneAtmosphere.jsx** — fixed atmospheric layers: two ambient orbs that drift with scroll, sweeping light rays, scroll-linked vignette with cool color-temperature shift
+- ✅ **Contextual Cursor** — modes via `data-cursor` attribute: default | hover | button | image | scene | read | drag | explore. Cursor label appears when `data-cursor-label` is present.
+- ✅ **KineticTitle** — hero letters stretch vertically on fast scroll (velocity-driven scaleY/scaleX + letter-spacing interpolation) and stagger-reveal character-by-character
+- ✅ **Continuous section morphs** — every home section has `.morph-section` with soft radial gradients top/bottom instead of hard borders; content overlays the persistent scene with strategic opacity curves so text stays legible in content-heavy sections (manifesto 0.42, philosophy 0.90, ecosystem 0.32, cta 0.55)
+- ✅ **Home rewritten** — single continuous cinematic timeline: Hero → Marquee (mix-blend-difference) → Manifesto (progressive-bold scrub) → Stats (blur-in reveals + animated counters) → Philosophy (mask reveal quote) → Ecosystem cards (glass-morphism over live scene) → Timeline (x-axis reveal with blur) → CTA
+- ✅ **ProgressRail** — right-edge scroll indicator with vertical bar + percentage counter
+- ✅ **Page transitions** — blur-fade between routes (7 → 0 filter) instead of hard cuts
 
 ## Backlog (P1)
 - Wire SendGrid email notifications when API key is provided (currently `skipped for now`)

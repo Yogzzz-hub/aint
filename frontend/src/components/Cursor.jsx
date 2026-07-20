@@ -1,16 +1,21 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 /**
- * Custom dot + ring cursor with lerp follow.
- * mix-blend-mode:difference is set via CSS.
+ * Contextual cursor — supports modes via `data-cursor` attribute:
+ *   default | hover | drag | read | explore | button | image | scene
+ * Displays a label when a `data-cursor-label` is present.
+ * Speed of the ring is scroll-velocity aware.
  */
 export default function Cursor() {
   const dotRef = useRef(null);
   const ringRef = useRef(null);
+  const labelRef = useRef(null);
   const pos = useRef({ x: 0, y: 0 });
   const target = useRef({ x: 0, y: 0 });
   const ringPos = useRef({ x: 0, y: 0 });
   const raf = useRef(0);
+  const [mode, setMode] = useState("default");
+  const [label, setLabel] = useState("");
 
   useEffect(() => {
     const onMove = (e) => {
@@ -18,28 +23,46 @@ export default function Cursor() {
       target.current.y = e.clientY;
     };
 
-    const setHover = (v) => {
-      dotRef.current?.classList.toggle("hover", v);
-      ringRef.current?.classList.toggle("hover", v);
-    };
-
     const overHandler = (e) => {
       const t = e.target;
       if (!t || !t.closest) return;
-      const interactive = t.closest("a, button, [data-magnetic], input, textarea, [data-cursor-hover]");
-      setHover(!!interactive);
+      const el =
+        t.closest("[data-cursor]") ||
+        t.closest("a") ||
+        t.closest("button") ||
+        t.closest("input, textarea");
+
+      if (!el) {
+        setMode("default");
+        setLabel("");
+        return;
+      }
+      const m = el.getAttribute("data-cursor");
+      if (m) {
+        setMode(m);
+      } else if (el.tagName === "A" || el.tagName === "BUTTON") {
+        setMode("button");
+      } else if (el.tagName === "INPUT" || el.tagName === "TEXTAREA") {
+        setMode("read");
+      } else {
+        setMode("hover");
+      }
+      const l = el.getAttribute("data-cursor-label");
+      setLabel(l || "");
     };
 
     const tick = () => {
-      pos.current.x += (target.current.x - pos.current.x) * 0.5;
-      pos.current.y += (target.current.y - pos.current.y) * 0.5;
-      ringPos.current.x += (target.current.x - ringPos.current.x) * 0.18;
-      ringPos.current.y += (target.current.y - ringPos.current.y) * 0.18;
+      pos.current.x += (target.current.x - pos.current.x) * 0.55;
+      pos.current.y += (target.current.y - pos.current.y) * 0.55;
+      ringPos.current.x += (target.current.x - ringPos.current.x) * 0.16;
+      ringPos.current.y += (target.current.y - ringPos.current.y) * 0.16;
 
       if (dotRef.current)
-        dotRef.current.style.transform = `translate3d(${pos.current.x - 3}px, ${pos.current.y - 3}px, 0)`;
+        dotRef.current.style.transform = `translate3d(${pos.current.x}px, ${pos.current.y}px, 0) translate(-50%,-50%)`;
       if (ringRef.current)
-        ringRef.current.style.transform = `translate3d(${ringPos.current.x - 17}px, ${ringPos.current.y - 17}px, 0)`;
+        ringRef.current.style.transform = `translate3d(${ringPos.current.x}px, ${ringPos.current.y}px, 0) translate(-50%,-50%)`;
+      if (labelRef.current)
+        labelRef.current.style.transform = `translate3d(${ringPos.current.x + 30}px, ${ringPos.current.y + 30}px, 0)`;
 
       raf.current = requestAnimationFrame(tick);
     };
@@ -56,8 +79,27 @@ export default function Cursor() {
 
   return (
     <>
-      <div ref={dotRef} className="cursor-dot" data-testid="custom-cursor-dot" />
-      <div ref={ringRef} className="cursor-ring" data-testid="custom-cursor-ring" />
+      <div
+        ref={dotRef}
+        className={`cursor-dot mode-${mode}`}
+        data-testid="custom-cursor-dot"
+      />
+      <div
+        ref={ringRef}
+        className={`cursor-ring mode-${mode}`}
+        data-testid="custom-cursor-ring"
+      >
+        <span className="cursor-inner" />
+      </div>
+      {label && (
+        <div
+          ref={labelRef}
+          className="cursor-label"
+          data-testid="cursor-label"
+        >
+          {label}
+        </div>
+      )}
     </>
   );
 }

@@ -1,0 +1,11 @@
+{
+  "ignorePatterns": [
+    "**/node_modules/**",
+    "**/build/**",
+    "**/dist/**",
+    "**/.emergent/**",
+    "**/.git/**",
+    "**/public/**",
+    "**/uploads/**"
+  ]
+}

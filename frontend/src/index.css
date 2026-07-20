@@ -66,7 +66,7 @@ button {
   transition: font-weight 40ms linear, opacity 200ms ease;
 }
 
-/* Custom cursor */
+/* ============ Contextual custom cursor ============ */
 .cursor-dot {
   position: fixed;
   top: 0;
@@ -78,8 +78,9 @@ button {
   pointer-events: none;
   z-index: 99999;
   mix-blend-mode: difference;
-  transform: translate3d(-50%, -50%, 0);
-  transition: width 260ms cubic-bezier(0.16, 1, 0.3, 1), height 260ms cubic-bezier(0.16, 1, 0.3, 1), background 200ms;
+  transition: width 380ms cubic-bezier(0.16, 1, 0.3, 1),
+              height 380ms cubic-bezier(0.16, 1, 0.3, 1),
+              background 260ms, opacity 260ms;
 }
 
 .cursor-ring {
@@ -89,22 +90,93 @@ button {
   width: 34px;
   height: 34px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.55);
   pointer-events: none;
   z-index: 99998;
   mix-blend-mode: difference;
-  transform: translate3d(-50%, -50%, 0);
-  transition: width 320ms cubic-bezier(0.16, 1, 0.3, 1), height 320ms cubic-bezier(0.16, 1, 0.3, 1), border-color 200ms;
+  transition: width 420ms cubic-bezier(0.16, 1, 0.3, 1),
+              height 420ms cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 260ms, background 260ms;
+  display: flex; align-items: center; justify-content: center;
+}
+.cursor-inner {
+  width: 0; height: 0; border-radius: 999px; background: transparent;
+  transition: width 320ms cubic-bezier(0.16,1,0.3,1), height 320ms cubic-bezier(0.16,1,0.3,1), background 260ms;
 }
 
-.cursor-dot.hover {
-  width: 14px;
-  height: 14px;
+.cursor-label {
+  position: fixed;
+  top: 0; left: 0;
+  z-index: 99997;
+  font-family: "Geist Mono", monospace;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  padding: 6px 10px;
+  background: rgba(255,255,255,0.95);
+  color: #000;
+  pointer-events: none;
+  border-radius: 999px;
+  white-space: nowrap;
+  transform: translate3d(0,0,0);
 }
-.cursor-ring.hover {
-  width: 72px;
-  height: 72px;
-  border-color: rgba(255, 255, 255, 0.9);
+
+/* Modes */
+.cursor-dot.mode-hover,
+.cursor-dot.mode-button { width: 12px; height: 12px; }
+.cursor-ring.mode-hover,
+.cursor-ring.mode-button { width: 68px; height: 68px; border-color: rgba(255,255,255,0.9); }
+
+.cursor-dot.mode-image,
+.cursor-dot.mode-explore { width: 0; height: 0; opacity: 0; }
+.cursor-ring.mode-image,
+.cursor-ring.mode-explore {
+  width: 96px; height: 96px;
+  border-color: rgba(255,255,255,0.85);
+  background: rgba(255,255,255,0.05);
+}
+.cursor-ring.mode-image .cursor-inner,
+.cursor-ring.mode-explore .cursor-inner {
+  width: 8px; height: 8px; background: #fff;
+}
+
+.cursor-dot.mode-read,
+.cursor-dot.mode-drag { width: 3px; height: 30px; border-radius: 2px; }
+.cursor-ring.mode-read { width: 12px; height: 44px; border-radius: 6px; border-color: rgba(255,255,255,0.7); }
+
+.cursor-dot.mode-scene,
+.cursor-dot.mode-drag { opacity: 0; }
+.cursor-ring.mode-scene {
+  width: 140px; height: 140px; border-color: rgba(255,255,255,0.55);
+  border-style: dashed;
+  background: transparent;
+}
+
+/* Section morph — no hard borders on home */
+.morph-section {
+  position: relative;
+  isolation: isolate;
+}
+.morph-section::before {
+  content: "";
+  position: absolute;
+  top: -1px; left: 0; right: 0; height: 14vh;
+  background: linear-gradient(180deg, rgba(0,0,0,0.55) 0%, transparent 100%);
+  pointer-events: none;
+  z-index: 2;
+}
+.morph-section::after {
+  content: "";
+  position: absolute;
+  bottom: -1px; left: 0; right: 0; height: 14vh;
+  background: linear-gradient(0deg, rgba(0,0,0,0.55) 0%, transparent 100%);
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Scroll velocity utility */
+.scroll-warp {
+  transition: transform 260ms cubic-bezier(0.16,1,0.3,1);
 }
 
 /* Film grain overlay */
