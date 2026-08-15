@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Upload, Check } from "lucide-react";
 import SplitReveal from "../components/SplitReveal";
 import MagneticButton from "../components/MagneticButton";
+import InternshipBenefits from "../components/InternshipBenefits";
 import { api, formatApiError, API_BASE } from "../lib/api";
 
 const FAQ = [
@@ -85,28 +86,7 @@ export default function Internships() {
         </p>
       </section>
 
-      {/* Why join */}
-      <section className="border-t border-graphite py-24">
-        <div className="max-w-[1600px] mx-auto px-6 md:px-10 grid grid-cols-1 md:grid-cols-3 gap-10">
-          {[
-            { t: "Real projects", b: "Ship code, designs, or research that reaches production or public documentation." },
-            { t: "Deep mentorship", b: "1:1 pairing with senior team members. Weekly critiques. Written feedback." },
-            { t: "Certificates & letters", b: "Every completed program receives an AINTRIX certificate and letter of recommendation." },
-          ].map((item, i) => (
-            <motion.div
-              key={item.t}
-              initial={{ opacity: 0, y: 40 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.7, delay: i * 0.08 }}
-              className="border-t border-graphite pt-8"
-            >
-              <div className="font-display text-3xl md:text-4xl tracking-tight2">{item.t}</div>
-              <div className="mt-4 text-smoke text-[15px] leading-relaxed">{item.b}</div>
-            </motion.div>
-          ))}
-        </div>
-      </section>
+      <InternshipBenefits />
 
       {/* FAQ */}
       <section className="border-t border-graphite py-24" data-testid="internship-faq">

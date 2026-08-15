@@ -40,9 +40,8 @@ export default function Footer() {
           <div className="md:col-span-3">
             <div className="text-xs uppercase tracking-[0.2em] text-smoke mb-5">Contact</div>
             <ul className="space-y-3 text-[14px]">
-              <li className="text-white">hello@aintrix.com</li>
-              <li className="text-white">invest@aintrix.com</li>
-              <li className="text-smoke">Bangalore · Mumbai</li>
+              <li className="text-white">greetings@aintrixglobal.in</li>
+              <li className="text-smoke">Chennai, Tamil Nadu</li>
               <li className="text-smoke">India</li>
             </ul>
           </div>
