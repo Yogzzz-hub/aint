@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { Upload, Check, X } from "lucide-react";
 import SplitReveal from "../components/SplitReveal";
 import MagneticButton from "../components/MagneticButton";
+import CareersPrinciples from "../components/CareersPrinciples";
 import { api, formatApiError } from "../lib/api";
 
 export default function Careers() {
@@ -30,21 +31,7 @@ export default function Careers() {
         </p>
       </section>
 
-      {/* Culture */}
-      <section className="border-t border-graphite py-24">
-        <div className="max-w-[1600px] mx-auto px-6 md:px-10 grid grid-cols-1 md:grid-cols-3 gap-10">
-          {[
-            { t: "Craft over speed", b: "We ship when the work is ready. We refuse to ship for the sake of shipping." },
-            { t: "Long horizon", b: "We invest in research programs that take years to compound. No quarterly noise." },
-            { t: "Cross-discipline", b: "AI meets creative direction meets industrial engineering. Range wins." },
-          ].map((c) => (
-            <div key={c.t} className="border-t border-graphite pt-8">
-              <div className="font-display text-3xl md:text-4xl tracking-tight2">{c.t}</div>
-              <div className="mt-4 text-smoke text-[15px] leading-relaxed">{c.b}</div>
-            </div>
-          ))}
-        </div>
-      </section>
+      <CareersPrinciples />
 
       {/* Open Roles */}
       <section className="border-t border-graphite py-24" data-testid="jobs-list">

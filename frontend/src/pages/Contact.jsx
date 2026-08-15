@@ -75,13 +75,13 @@ export default function Contact() {
               </div>
               <div className="border-t border-graphite pt-6">
                 <div className="text-xs uppercase tracking-[0.25em] text-smoke mb-2 flex items-center gap-2"><MapPin size={12}/> Offices</div>
-                <div className="font-display text-2xl md:text-3xl tracking-tight2">Bangalore · Mumbai</div>
-                <div className="text-smoke text-sm mt-1">India — Global</div>
+                <div className="font-display text-2xl md:text-3xl tracking-tight2">Chennai · Mylapore</div>
+                <div className="text-smoke text-sm mt-1">India</div>
               </div>
               <div className="border-t border-graphite pt-6 aspect-[4/3] overflow-hidden">
                 <iframe
                   title="AINTRIX Office Location"
-                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d248849.83!2d77.4661!3d12.9539!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0!2sBangalore!5e0!3m2!1sen!2sin!4v1700000000000"
+                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d248849.83!2d80.2676!3d13.0368!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0!2sMylapore%2C%20Chennai%2C%20Tamil%20Nadu%2C%20India!5e0!3m2!1sen!2sin!4v1700000000000"
                   className="w-full h-full grayscale contrast-125 border border-graphite"
                   loading="lazy"
                   data-testid="contact-map"
