@@ -15,6 +15,29 @@ export default function Careers() {
     api.get("/jobs").then((r) => setJobs(r.data || [])).catch(() => setJobs([]));
   }, []);
 
+  const cards = [
+    {
+      num: "01",
+      title: "Think Deeply",
+      text: "We take time to understand the problem before building the solution. Curiosity, research, and thoughtful experimentation drive our work."
+    },
+    {
+      num: "02",
+      title: "Build Together",
+      text: "Great ideas grow through collaboration. We work across disciplines, share knowledge openly, and learn from one another."
+    },
+    {
+      num: "03",
+      title: "Own the Outcome",
+      text: "We trust people to take responsibility for their work. From the first idea to the final result, ownership matters."
+    },
+    {
+      num: "04",
+      title: "Keep Exploring",
+      text: "Technology never stands still. We encourage continuous learning, experimentation, and the courage to explore what comes next."
+    }
+  ];
+
   return (
     <div className="pt-32">
       <section className="max-w-[1600px] mx-auto px-6 md:px-10 pt-16 pb-20">
@@ -66,6 +89,62 @@ export default function Careers() {
               </motion.button>
             ))}
             {jobs.length === 0 && <div className="py-8 text-smoke text-sm">No roles listed yet — check back soon.</div>}
+          </div>
+        </div>
+      </section>
+
+      {/* Work Culture */}
+      <section className="border-t border-graphite py-24">
+        <div className="max-w-[1600px] mx-auto px-6 md:px-10">
+          <div className="text-xs uppercase tracking-[0.25em] text-smoke mb-4">Work Culture</div>
+          <h2 className="font-display text-4xl md:text-6xl tracking-crush leading-[0.95] mb-6">How we work.</h2>
+          <p className="text-smoke text-lg leading-relaxed max-w-3xl mb-16">
+            At AINTRIX, we believe great work comes from curious minds, meaningful collaboration, and the freedom to explore. We value people who think deeply, take ownership, and build with purpose.
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {[
+              {
+                num: "01",
+                title: "Think Deeply",
+                text: "We take time to understand the problem before building the solution. Curiosity, research, and thoughtful experimentation drive our work."
+              },
+              {
+                num: "02",
+                title: "Build Together",
+                text: "Great ideas grow through collaboration. We work across disciplines, share knowledge openly, and learn from one another."
+              },
+              {
+                num: "03",
+                title: "Own the Outcome",
+                text: "We trust people to take responsibility for their work. From the first idea to the final result, ownership matters."
+              },
+              {
+                num: "04",
+                title: "Keep Exploring",
+                text: "Technology never stands still. We encourage continuous learning, experimentation, and the courage to explore what comes next."
+              }
+            ].map((card, i) => (
+              <motion.div
+                key={card.num}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.7, delay: (i % 5) * 0.05 }}
+                className="relative bg-black/60 backdrop-blur-xl border border-white/10 rounded-2xl p-8 md:p-10 shadow-[0_8px_32px_rgba(0,0,0,0.4)] overflow-hidden hover:-translate-y-1 hover:border-white/20 hover:shadow-[0_12px_40px_rgba(0,0,0,0.6)] transition-all duration-500 ease-out"
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none rounded-2xl" />
+                <div className="relative z-10">
+                  <div className="text-xs text-smoke uppercase tracking-[0.2em] mb-4">{card.num} — {card.title}</div>
+                  <p className="text-smoke leading-relaxed">{card.text}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+
+          <div className="mt-16 md:mt-24 text-center">
+            <h3 className="font-display text-3xl md:text-5xl tracking-crush leading-[0.95] mb-4">Different minds. One direction.</h3>
+            <p className="text-smoke text-lg leading-relaxed max-w-2xl mx-auto">We bring together engineers, researchers, designers, and creators to build ideas that matter.</p>
           </div>
         </div>
       </section>
