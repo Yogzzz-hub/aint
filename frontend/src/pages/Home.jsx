@@ -341,9 +341,15 @@ export default function Home() {
                         <h3 className={`font-display tracking-tight2 leading-[1.05] ${featured ? "text-3xl md:text-5xl" : "text-2xl md:text-3xl"}`}>{d.name}</h3>
                         <p className="mt-4 text-smoke text-sm leading-relaxed">{d.body}</p>
                       </div>
-                      <div className="mt-8 flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-white">
-                        Learn more <ArrowUpRight size={14} />
-                      </div>
+                      {d.key === "ryze" ? (
+                        <a href="https://www.ryzeworks.tech" target="_blank" rel="noopener noreferrer" className="mt-8 flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-white w-fit cursor-pointer z-10">
+                          Learn more <ArrowUpRight size={14} />
+                        </a>
+                      ) : (
+                        <div className="mt-8 flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-white">
+                          Learn more <ArrowUpRight size={14} />
+                        </div>
+                      )}
                     </div>
                   </div>
                 </motion.div>

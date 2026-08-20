@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useForm } from "react-hook-form";
-import { Upload, Check, X } from "lucide-react";
+import { Upload, Check, X, Brain, Users, Target, Sparkles, ArrowRight } from "lucide-react";
 import SplitReveal from "../components/SplitReveal";
 import MagneticButton from "../components/MagneticButton";
 import CareersPrinciples from "../components/CareersPrinciples";
@@ -102,41 +102,70 @@ export default function Careers() {
             At AINTRIX, we believe great work comes from curious minds, meaningful collaboration, and the freedom to explore. We value people who think deeply, take ownership, and build with purpose.
           </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 [perspective:2000px]">
             {[
               {
                 num: "01",
                 title: "Think Deeply",
-                text: "We take time to understand the problem before building the solution. Curiosity, research, and thoughtful experimentation drive our work."
+                text: "We take time to understand the problem before building the solution. Curiosity, research, and thoughtful experimentation drive our work.",
+                Icon: Brain,
+                rotateY: 10
               },
               {
                 num: "02",
                 title: "Build Together",
-                text: "Great ideas grow through collaboration. We work across disciplines, share knowledge openly, and learn from one another."
+                text: "Great ideas grow through collaboration. We work across disciplines, share knowledge openly, and learn from one another.",
+                Icon: Users,
+                rotateY: 4
               },
               {
                 num: "03",
                 title: "Own the Outcome",
-                text: "We trust people to take responsibility for their work. From the first idea to the final result, ownership matters."
+                text: "We trust people to take responsibility for their work. From the first idea to the final result, ownership matters.",
+                Icon: Target,
+                rotateY: -4
               },
               {
                 num: "04",
                 title: "Keep Exploring",
-                text: "Technology never stands still. We encourage continuous learning, experimentation, and the courage to explore what comes next."
+                text: "Technology never stands still. We encourage continuous learning, experimentation, and the courage to explore what comes next.",
+                Icon: Sparkles,
+                rotateY: -10
               }
             ].map((card, i) => (
               <motion.div
                 key={card.num}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
+                initial={{ opacity: 0, y: 30, rotateY: card.rotateY }}
+                whileInView={{ opacity: 1, y: 0, rotateY: card.rotateY }}
                 viewport={{ once: true }}
-                transition={{ duration: 0.7, delay: (i % 5) * 0.05 }}
-                className="relative bg-black/60 backdrop-blur-xl border border-white/10 rounded-2xl p-8 md:p-10 shadow-[0_8px_32px_rgba(0,0,0,0.4)] overflow-hidden hover:-translate-y-1 hover:border-white/20 hover:shadow-[0_12px_40px_rgba(0,0,0,0.6)] transition-all duration-500 ease-out"
+                transition={{ duration: 0.8, delay: (i % 5) * 0.1, ease: "easeOut" }}
+                whileHover={{ rotateY: 0, scale: 1.05, y: -10, z: 20 }}
+                className="relative flex flex-col min-h-[400px] group"
+                style={{ transformStyle: "preserve-3d" }}
               >
-                <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none rounded-2xl" />
-                <div className="relative z-10">
-                  <div className="text-xs text-smoke uppercase tracking-[0.2em] mb-4">{card.num} — {card.title}</div>
-                  <p className="text-smoke leading-relaxed">{card.text}</p>
+                {/* 1. Layered shapes behind the card (subtle glass depth) */}
+                <div className="absolute -inset-4 bg-white/[0.02] blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700" style={{ transform: "translateZ(-20px)" }} />
+                <div className="absolute -top-6 -right-6 w-32 h-32 bg-white/[0.04] blur-2xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700" style={{ transform: "translateZ(-10px)" }} />
+                
+                {/* 2. Main Glass Surface & Glow */}
+                <div className="absolute inset-0 bg-black/40 backdrop-blur-2xl border border-white/10 rounded-2xl overflow-hidden transition-all duration-500 ease-out shadow-[0_15px_30px_rgba(0,0,0,0.8)] group-hover:border-white/30 group-hover:bg-white/[0.03] group-hover:shadow-[0_0_40px_rgba(255,255,255,0.05),_0_20px_50px_rgba(0,0,0,0.9)]" />
+                
+                {/* 3. Soft inner highlight along the top/left edges */}
+                <div className="absolute inset-0 rounded-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),inset_1px_0_1px_rgba(255,255,255,0.1)] pointer-events-none transition-opacity duration-500 group-hover:opacity-100 opacity-60" />
+
+                {/* 4. Moving light reflection effect */}
+                <div className="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-700">
+                  <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent -translate-x-[150%] group-hover:translate-x-[150%] transition-transform duration-[1.5s] ease-in-out" />
+                </div>
+                
+                {/* Content Container (Elevated via translateZ) */}
+                <div className="relative z-10 flex-1 flex flex-col p-8 md:p-10 transition-transform duration-500 group-hover:translate-z-[40px]" style={{ transform: "translateZ(25px)" }}>
+                  <div className="flex justify-end items-start mb-10">
+                    <span className="text-xl text-white/40 group-hover:text-white/90 font-light tracking-widest transition-colors duration-500">{card.num}</span>
+                  </div>
+                  
+                  <h3 className="text-sm text-white uppercase tracking-[0.2em] mb-5 font-semibold drop-shadow-md">{card.title}</h3>
+                  <p className="text-smoke/80 text-[14px] leading-relaxed flex-1 group-hover:text-white transition-colors duration-500">{card.text}</p>
                 </div>
               </motion.div>
             ))}
