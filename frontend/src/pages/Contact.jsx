@@ -33,7 +33,6 @@ export default function Contact() {
       const url = `${API_BASE}${data.download_url.replace("/api", "")}`;
       setDownloadUrl(url);
       setInvestorDone(true);
-      // Auto-trigger download
       const a = document.createElement("a");
       a.href = url;
       a.setAttribute("download", "AINTRIX_Investor_Deck.pdf");
@@ -62,49 +61,66 @@ export default function Contact() {
         <div className="max-w-[1600px] mx-auto px-6 md:px-10 grid grid-cols-1 md:grid-cols-12 gap-16">
           {/* Info */}
           <div className="md:col-span-5">
-            <div className="text-xs uppercase tracking-[0.25em] text-smoke mb-8">Reach us</div>
-            <div className="space-y-8">
-              <div className="border-t border-graphite pt-6">
-                <div className="text-xs uppercase tracking-[0.25em] text-smoke mb-2 flex items-center gap-2"><Mail size={12}/> Email</div>
-                <div className="font-display text-2xl md:text-3xl tracking-tight2">greetings@aintrixglobal.in</div>
-                <div className="text-smoke text-sm mt-1">invest@aintrix.com · careers@aintrix.com</div>
-              </div>
-              <div className="border-t border-graphite pt-6">
-                <div className="text-xs uppercase tracking-[0.25em] text-smoke mb-2 flex items-center gap-2"><Phone size={12}/> Phone</div>
-                <div className="font-display text-2xl md:text-3xl tracking-tight2">+91 · By appointment</div>
-              </div>
-              <div className="border-t border-graphite pt-6">
-                <div className="text-xs uppercase tracking-[0.25em] text-smoke mb-2 flex items-center gap-2"><MapPin size={12}/> Offices</div>
-                <div className="font-display text-2xl md:text-3xl tracking-tight2">Chennai · Mylapore</div>
-                <div className="text-smoke text-sm mt-1">India</div>
+            <div className="relative bg-white/[0.05] backdrop-blur-2xl border border-white/[0.25] rounded-3xl p-8 shadow-[0_8px_40px_rgba(0,0,0,0.5),0_0_24px_rgba(255,255,255,0.06)] overflow-hidden group hover:bg-white/[0.08] hover:border-white/[0.4] hover:shadow-[0_12px_48px_rgba(0,0,0,0.6),0_0_32px_rgba(255,255,255,0.1)] transition-all duration-500 ease-out">
+              <div className="absolute inset-0 bg-gradient-to-br from-white/[0.12] to-transparent pointer-events-none rounded-3xl" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent pointer-events-none rounded-3xl" />
+              <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent pointer-events-none rounded-3xl" />
+              <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none rounded-3xl" />
+              <div className="absolute -inset-1 bg-gradient-to-br from-white/[0.08] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 ease-out rounded-3xl" />
+              <div className="relative z-10">
+                <div className="text-xs uppercase tracking-[0.25em] text-smoke mb-8">Reach us</div>
+                <div className="space-y-8">
+                  <div className="border-t border-graphite pt-6">
+                    <div className="text-xs uppercase tracking-[0.25em] text-smoke mb-2 flex items-center gap-2"><Mail size={12}/> Email</div>
+                    <div className="font-display text-2xl md:text-3xl tracking-tight2">greetings@aintrixglobal.in</div>
+                  </div>
+                  <div className="border-t border-graphite pt-6">
+                    <div className="text-xs uppercase tracking-[0.25em] text-smoke mb-2 flex items-center gap-2"><Phone size={12}/> Phone</div>
+                    <div className="font-display text-2xl md:text-3xl tracking-tight2">+91 · By appointment</div>
+                  </div>
+                  <div className="border-t border-graphite pt-6">
+                    <div className="text-xs uppercase tracking-[0.25em] text-smoke mb-2 flex items-center gap-2"><MapPin size={12}/> Offices</div>
+                    <div className="font-display text-2xl md:text-3xl tracking-tight2">Chennai · Mylapore</div>
+                    <div className="text-smoke text-sm mt-1">India</div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
           {/* Contact form */}
           <div className="md:col-span-7">
-            <div className="text-xs uppercase tracking-[0.25em] text-smoke mb-8">Send a message</div>
-            {contactDone ? (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="border border-graphite p-10 bg-surface" data-testid="contact-success">
-                <Check className="mb-5" />
-                <div className="font-display text-3xl tracking-tight2 mb-2">Message received.</div>
-                <div className="text-smoke">We'll be in touch shortly.</div>
-              </motion.div>
-            ) : (
-              <form onSubmit={contact.handleSubmit(submitContact)} className="grid grid-cols-1 md:grid-cols-2 gap-8" data-testid="contact-form">
-                <input {...contact.register("name", { required: true })} className="editorial-input" placeholder="Name" data-testid="contact-name" />
-                <input {...contact.register("email", { required: true })} type="email" className="editorial-input" placeholder="Email" data-testid="contact-email" />
-                <input {...contact.register("company")} className="editorial-input" placeholder="Company (optional)" data-testid="contact-company" />
-                <input {...contact.register("subject")} className="editorial-input" placeholder="Subject" data-testid="contact-subject" />
-                <textarea {...contact.register("message", { required: true })} className="editorial-textarea md:col-span-2" placeholder="Your message" data-testid="contact-message" />
-                {contactErr && <div className="md:col-span-2 text-red-400 text-sm">{contactErr}</div>}
-                <div className="md:col-span-2 flex items-center gap-6 pt-2">
-                  <MagneticButton type="submit" disabled={contact.formState.isSubmitting} className="bg-white text-black px-8 py-4 rounded-full text-sm font-medium disabled:opacity-50" data-testid="contact-submit">
-                    {contact.formState.isSubmitting ? "Sending…" : "Send message"}
-                  </MagneticButton>
-                </div>
-              </form>
-            )}
+            <div className="relative bg-white/[0.05] backdrop-blur-2xl border border-white/[0.25] rounded-3xl p-8 shadow-[0_8px_40px_rgba(0,0,0,0.5),0_0_24px_rgba(255,255,255,0.06)] overflow-hidden group hover:bg-white/[0.08] hover:border-white/[0.4] hover:shadow-[0_12px_48px_rgba(0,0,0,0.6),0_0_32px_rgba(255,255,255,0.1)] transition-all duration-500 ease-out">
+              <div className="absolute inset-0 bg-gradient-to-br from-white/[0.12] to-transparent pointer-events-none rounded-3xl" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent pointer-events-none rounded-3xl" />
+              <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent pointer-events-none rounded-3xl" />
+              <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none rounded-3xl" />
+              <div className="absolute -inset-1 bg-gradient-to-br from-white/[0.08] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 ease-out rounded-3xl" />
+              <div className="relative z-10">
+                <div className="text-xs uppercase tracking-[0.25em] text-smoke mb-8">Send a message</div>
+                {contactDone ? (
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="border border-graphite p-10 bg-surface" data-testid="contact-success">
+                    <Check className="mb-5" />
+                    <div className="font-display text-3xl tracking-tight2 mb-2">Message received.</div>
+                    <div className="text-smoke">We'll be in touch shortly.</div>
+                  </motion.div>
+                ) : (
+                  <form onSubmit={contact.handleSubmit(submitContact)} className="grid grid-cols-1 md:grid-cols-2 gap-8" data-testid="contact-form">
+                <input {...contact.register("name", { required: true })} className="editorial-input bg-white/[0.03] backdrop-blur-xl border border-white/[0.12] rounded-xl" placeholder="Name" data-testid="contact-name" />
+                <input {...contact.register("email", { required: true })} type="email" className="editorial-input bg-white/[0.03] backdrop-blur-xl border border-white/[0.12] rounded-xl" placeholder="Email" data-testid="contact-email" />
+                <input {...contact.register("company")} className="editorial-input bg-white/[0.03] backdrop-blur-xl border border-white/[0.12] rounded-xl" placeholder="Company (optional)" data-testid="contact-company" />
+                <input {...contact.register("subject")} className="editorial-input bg-white/[0.03] backdrop-blur-xl border border-white/[0.12] rounded-xl" placeholder="Subject" data-testid="contact-subject" />
+                <textarea {...contact.register("message", { required: true })} className="editorial-textarea bg-white/[0.03] backdrop-blur-xl border border-white/[0.12] rounded-xl md:col-span-2" placeholder="Your message" data-testid="contact-message" />
+                    {contactErr && <div className="md:col-span-2 text-red-400 text-sm">{contactErr}</div>}
+                    <div className="md:col-span-2 flex items-center gap-6 pt-2">
+                      <MagneticButton type="submit" disabled={contact.formState.isSubmitting} className="bg-white text-black px-8 py-4 rounded-full text-sm font-medium disabled:opacity-50" data-testid="contact-submit">
+                        {contact.formState.isSubmitting ? "Sending…" : "Send message"}
+                      </MagneticButton>
+                    </div>
+                  </form>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </section>
