@@ -1,4 +1,4 @@
-import React, { Suspense, useMemo, useRef } from "react";
+import React, { Suspense, useMemo, useRef, useEffect, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Environment, MeshDistortMaterial, Icosahedron, TorusKnot, Sphere } from "@react-three/drei";
 import * as THREE from "three";
@@ -11,8 +11,11 @@ import { useScrollSignal } from "../store/scrollStore";
  *   - Camera orbits + dollies as user scrolls
  *   - Icosahedron distorts, becomes wireframe, becomes glass, dissolves to particles
  *   - Lighting temperature shifts warm -> cool
- * This creates the "continuous film" feeling — sections never break,
- * only the surface treatment of the same object changes.
+ *
+ * FIX (2026-09): Replaced declarative <bufferAttribute> JSX props
+ * (count/array/itemSize) with imperative geometry setup via useEffect.
+ * The declarative approach triggers an e.map TypeError in Three.js r170
+ * because r3f passes props as constructor args, not attribute setters.
  */
 
 function lerp(a, b, t) { return a + (b - a) * t; }
@@ -24,12 +27,13 @@ function SculptureRig() {
   const wireRef = useRef(null);
   const glassRef = useRef(null);
   const knotRef = useRef(null);
-  const particlesRef = useRef(null);
+  const pointsRef = useRef(null);
+  const geoRef = useRef(null);
   const material = useRef(null);
   const mouse = useRef({ x: 0, y: 0 });
   const velocityBoost = useRef(0);
 
-  // Particle field — becomes visible in later sections
+  // Build particle positions once
   const particlePositions = useMemo(() => {
     const N = 900;
     const arr = new Float32Array(N * 3);
@@ -37,14 +41,30 @@ function SculptureRig() {
       const r = Math.pow(Math.random(), 0.5) * 3.5 + 0.4;
       const theta = Math.random() * Math.PI * 2;
       const phi = Math.acos(2 * Math.random() - 1);
-      arr[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+      arr[i * 3]     = r * Math.sin(phi) * Math.cos(theta);
       arr[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
       arr[i * 3 + 2] = r * Math.cos(phi);
     }
     return arr;
   }, []);
 
-  React.useEffect(() => {
+  // Imperatively set the BufferGeometry — avoids the e.map TypeError
+  // that occurs when r3f v8 tries to pass JSX props as constructor args
+  // to THREE.BufferAttribute in Three.js r170.
+  useEffect(() => {
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute(
+      "position",
+      new THREE.BufferAttribute(particlePositions, 3)
+    );
+    geoRef.current = geo;
+    if (pointsRef.current) {
+      pointsRef.current.geometry = geo;
+    }
+    return () => geo.dispose();
+  }, [particlePositions]);
+
+  useEffect(() => {
     const onMove = (e) => {
       mouse.current.x = (e.clientX / window.innerWidth) * 2 - 1;
       mouse.current.y = -(e.clientY / window.innerHeight) * 2 + 1;
@@ -57,22 +77,14 @@ function SculptureRig() {
     const g = group.current;
     if (!g) return;
 
-    // Read live scroll progress + velocity from store
     const st = useScrollSignal.getState();
-    const p = clamp01(st.progress); // 0..1 over home total scroll
+    const p = clamp01(st.progress);
     const vel = st.velocity;
 
-    // Smooth a velocity boost so quick scrolls stretch the object
     velocityBoost.current = lerp(velocityBoost.current, Math.min(Math.abs(vel) / 40, 1), 0.08);
 
-    // ==== Camera orchestration ====
+    // Camera orchestration
     const cam = state.camera;
-    // 0..1 chapters:
-    //  0.00-0.15 hero
-    //  0.15-0.35 manifesto -> zoom-in
-    //  0.35-0.55 stats -> orbit right
-    //  0.55-0.75 philosophy -> pull back, glass
-    //  0.75-1.00 ecosystem/timeline -> particles disperse
     const camTargetZ = lerp(4.4, 6.4, p);
     const camTargetX = Math.sin(p * Math.PI * 1.5) * 1.6;
     const camTargetY = -Math.cos(p * Math.PI) * 0.9 + 0.2;
@@ -81,21 +93,19 @@ function SculptureRig() {
     cam.position.z = lerp(cam.position.z, camTargetZ, 0.05);
     cam.lookAt(0, 0, 0);
 
-    // ==== Object rotation ====
+    // Object rotation
     g.rotation.y += dt * 0.15 + vel * 0.0005;
     g.rotation.x = lerp(g.rotation.x, mouse.current.y * 0.4 + p * 0.6, 0.05);
 
-    // Master group scale — grows toward end
+    // Master scale
     const s = lerp(1, 1.35, p) * (1 + velocityBoost.current * 0.05);
     g.scale.set(s, s, s);
 
-    // ==== Material state blending ====
-    // Solid mesh — visible 0..0.65, opacity decays
+    // Solid mesh — visible 0..0.65
     if (meshRef.current) {
       const op = clamp01(1 - (p - 0.55) * 4);
       meshRef.current.material.opacity = op;
       meshRef.current.material.transparent = true;
-      // distortion scrubs with velocity
       const distort = 0.32 + velocityBoost.current * 0.5 + Math.sin(state.clock.elapsedTime * 0.4) * 0.05;
       if (meshRef.current.material.distort !== undefined) {
         meshRef.current.material.distort = distort;
@@ -117,7 +127,7 @@ function SculptureRig() {
       glassRef.current.scale.setScalar(0.6 + p * 0.4);
     }
 
-    // Second geometry — appears 0.7..1
+    // Sphere — appears 0.7..1
     if (knotRef.current) {
       const op = clamp01((p - 0.7) * 4);
       knotRef.current.material.opacity = op;
@@ -126,11 +136,13 @@ function SculptureRig() {
       knotRef.current.scale.setScalar(0.5 + p * 0.5);
     }
 
-    // Particles — grow presence throughout, dominant at end
-    if (particlesRef.current) {
-      particlesRef.current.rotation.y = state.clock.elapsedTime * 0.03;
-      particlesRef.current.material.opacity = 0.15 + p * 0.75;
-      particlesRef.current.material.size = 0.012 + p * 0.022;
+    // Particles
+    if (pointsRef.current) {
+      pointsRef.current.rotation.y = state.clock.elapsedTime * 0.03;
+      if (pointsRef.current.material) {
+        pointsRef.current.material.opacity = 0.15 + p * 0.75;
+        pointsRef.current.material.size = 0.012 + p * 0.022;
+      }
     }
   });
 
@@ -148,12 +160,12 @@ function SculptureRig() {
         />
       </Icosahedron>
 
-      {/* Wireframe overlay of same shape */}
+      {/* Wireframe overlay */}
       <Icosahedron ref={wireRef} args={[1.65, 3]}>
         <meshBasicMaterial color="#ffffff" wireframe transparent opacity={0} />
       </Icosahedron>
 
-      {/* Glass torus knot appears mid-story */}
+      {/* Glass torus knot */}
       <TorusKnot ref={glassRef} args={[1.1, 0.28, 128, 24]}>
         <meshPhysicalMaterial
           color="#ffffff"
@@ -166,7 +178,7 @@ function SculptureRig() {
         />
       </TorusKnot>
 
-      {/* End geometry — a small dense sphere */}
+      {/* Dense sphere */}
       <Sphere ref={knotRef} args={[0.4, 64, 64]} position={[0, 0, 0]}>
         <meshStandardMaterial
           color="#ffffff"
@@ -177,29 +189,42 @@ function SculptureRig() {
         />
       </Sphere>
 
-      {/* Persistent particle cloud */}
-      <points ref={particlesRef}>
-        <bufferGeometry>
-          <bufferAttribute
-            attach="attributes-position"
-            count={particlePositions.length / 3}
-            array={particlePositions}
-            itemSize={3}
-          />
-        </bufferGeometry>
-        <pointsMaterial color="#ffffff" size={0.014} sizeAttenuation transparent opacity={0.2} />
+      {/* Particle cloud — geometry set imperatively in useEffect above */}
+      <points ref={pointsRef}>
+        <pointsMaterial
+          color="#ffffff"
+          size={0.014}
+          sizeAttenuation
+          transparent
+          opacity={0.2}
+        />
       </points>
     </group>
+  );
+}
+
+// Scene wrapper that handles WebGL context loss/restore gracefully
+function SceneContent() {
+  return (
+    <>
+      <ambientLight intensity={0.2} />
+      <directionalLight position={[3, 4, 2]} intensity={1.4} color="#ffffff" />
+      <directionalLight position={[-3, -2, -1]} intensity={0.65} color="#e8e8ff" />
+      <Suspense fallback={null}>
+        <SculptureRig />
+        <Environment preset="city" />
+      </Suspense>
+    </>
   );
 }
 
 export default function PersistentScene() {
   const loaded = useScrollSignal((s) => s.loaded);
   const wrapRef = useRef(null);
+  const [contextLost, setContextLost] = useState(false);
 
-  // Fade scene by scroll region so text-heavy sections stay legible.
-  // Curve: hero 1.0 -> manifesto 0.42 -> stats 0.55 -> philosophy 0.9 -> ecosystem 0.32 -> timeline 0.28 -> cta 0.55
-  React.useEffect(() => {
+  // Scroll-driven opacity curve
+  useEffect(() => {
     let raf;
     const zones = [
       { at: 0.00, o: 1.00 },
@@ -223,37 +248,60 @@ export default function PersistentScene() {
       const el = wrapRef.current;
       if (el) {
         const p = useScrollSignal.getState().progress;
-        el.style.opacity = String(loaded ? sample(p) : 0);
+        el.style.opacity = String(loaded && !contextLost ? sample(p) : 0);
       }
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [loaded]);
+  }, [loaded, contextLost]);
+
+  // WebGL context loss / restore handlers
+  const onCreated = ({ gl }) => {
+    const canvas = gl.domElement;
+
+    const handleLost = (e) => {
+      e.preventDefault();
+      console.warn("WebGL context lost — hiding scene.");
+      setContextLost(true);
+    };
+
+    const handleRestored = () => {
+      console.info("WebGL context restored — resuming scene.");
+      setContextLost(false);
+    };
+
+    canvas.addEventListener("webglcontextlost", handleLost);
+    canvas.addEventListener("webglcontextrestored", handleRestored);
+
+    // Store cleanup refs on canvas for teardown
+    canvas._aintrixLostHandler = handleLost;
+    canvas._aintrixRestoreHandler = handleRestored;
+  };
 
   return (
     <div
       ref={wrapRef}
       className="fixed inset-0 z-0 pointer-events-none"
       data-testid="persistent-scene"
-      style={{
-        opacity: 0,
-        transition: "opacity 220ms linear",
-      }}
+      style={{ opacity: 0, transition: "opacity 220ms linear" }}
     >
-      <Canvas
-        dpr={[1, 1.6]}
-        gl={{ antialias: true, alpha: true }}
-        camera={{ position: [0, 0, 4.4], fov: 45 }}
-      >
-        <ambientLight intensity={0.2} />
-        <directionalLight position={[3, 4, 2]} intensity={1.4} color="#ffffff" />
-        <directionalLight position={[-3, -2, -1]} intensity={0.65} color="#e8e8ff" />
-        <Suspense fallback={null}>
-          <SculptureRig />
-          <Environment preset="city" />
-        </Suspense>
-      </Canvas>
+      {!contextLost && (
+        <Canvas
+          dpr={[1, 1.6]}
+          gl={{
+            antialias: true,
+            alpha: true,
+            powerPreference: "high-performance",
+            // Prevent context loss on low-end GPUs from crashing React
+            failIfMajorPerformanceCaveat: false,
+          }}
+          camera={{ position: [0, 0, 4.4], fov: 45 }}
+          onCreated={onCreated}
+        >
+          <SceneContent />
+        </Canvas>
+      )}
     </div>
   );
 }
