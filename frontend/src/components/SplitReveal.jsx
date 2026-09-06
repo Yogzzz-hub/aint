@@ -16,7 +16,7 @@ export default function SplitReveal({
 }) {
   const ref = useRef(null);
   const inView = useInView(ref, { once, margin: "-10% 0px -10% 0px" });
-  const words = String(text).split(" ");
+  const words = text ? String(text).split(" ") : [];
 
   return (
     <Tag ref={ref} className={className} data-testid={testId}>

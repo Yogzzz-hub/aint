@@ -18,7 +18,7 @@ export default function ProgressiveText({
   testId,
 }) {
   const rootRef = useRef(null);
-  const words = String(text).split(/(\s+)/);
+  const words = text ? String(text).split(/(\s+)/) : [];
 
   useEffect(() => {
     const el = rootRef.current;

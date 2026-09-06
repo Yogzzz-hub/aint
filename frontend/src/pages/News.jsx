@@ -12,12 +12,13 @@ export default function News() {
 
   useEffect(() => {
     api.get("/articles", { params: cat !== "All" ? { category: cat } : {} })
-      .then((r) => setArticles(r.data || []))
+      .then((r) => setArticles(Array.isArray(r.data) ? r.data : []))
       .catch(() => setArticles([]));
   }, [cat]);
 
-  const featured = articles[0];
-  const rest = articles.slice(1);
+  const articlesList = Array.isArray(articles) ? articles : [];
+  const featured = articlesList[0];
+  const rest = articlesList.slice(1);
 
   return (
     <div className="pt-32">
@@ -103,7 +104,7 @@ export default function News() {
               </Link>
             </motion.div>
           ))}
-          {articles.length === 0 && <div className="text-smoke text-sm">No articles yet.</div>}
+          {articlesList.length === 0 && <div className="text-smoke text-sm">No articles yet.</div>}
         </div>
       </section>
     </div>
