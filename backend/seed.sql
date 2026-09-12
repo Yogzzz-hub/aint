@@ -2,9 +2,9 @@
 -- Clear existing data
 TRUNCATE TABLE career_applications, internships, investor_leads, contacts, research, jobs, articles, users RESTART IDENTITY CASCADE;
 
--- Seed admin user (password: Aintrix@2026)
+-- Seed admin user (password: Aintrix@111!)
 INSERT INTO users (email, password_hash, name, role) VALUES
-('admin@aintrix.com', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5GyYIxF6q0OKe', 'AINTRIX Admin', 'admin');
+('admin@aintrix.com', '$2b$12$wNmiUbCVZN.MLVul4TGcNuzkJqYBn8OTgNd.hQHXafx1gYwHAjVSu', 'AINTRIX Admin', 'admin');
 
 -- Seed demo jobs
 INSERT INTO jobs (title, department, location, type, description, requirements, published) VALUES
