@@ -132,8 +132,11 @@ function Table({ url, title, fields, testId }) {
   const [rows, setRows] = useState([]);
   const [err, setErr] = useState("");
   useEffect(() => {
-    api.get(url).then((r) => setRows(r.data || [])).catch((e) => setErr(formatApiError(e)));
+    api.get(url).then((r) => setRows(Array.isArray(r.data) ? r.data : [])).catch((e) => setErr(formatApiError(e)));
   }, [url]);
+
+  const rowList = Array.isArray(rows) ? rows : [];
+  const fieldList = Array.isArray(fields) ? fields : [];
 
   return (
     <div data-testid={testId}>
@@ -144,23 +147,23 @@ function Table({ url, title, fields, testId }) {
         <table className="w-full text-sm">
           <thead className="bg-surface">
             <tr>
-              {fields.map((f) => (
+              {fieldList.map((f) => (
                 <th key={f} className="text-left px-4 py-3 text-xs uppercase tracking-[0.2em] text-smoke font-medium border-b border-graphite">{f}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {rows.map((row, i) => (
+            {rowList.map((row, i) => (
               <tr key={row.id || i} className="border-b border-graphite hover:bg-surface">
-                {fields.map((f) => (
+                {fieldList.map((f) => (
                   <td key={f} className="px-4 py-3 align-top text-white/90 max-w-xs truncate" title={String(row[f] || "")}>
                     {String(row[f] ?? "—").slice(0, 200)}
                   </td>
                 ))}
               </tr>
             ))}
-            {rows.length === 0 && (
-              <tr><td colSpan={fields.length} className="px-4 py-8 text-smoke text-center">No data yet.</td></tr>
+            {rowList.length === 0 && (
+              <tr><td colSpan={fieldList.length} className="px-4 py-8 text-smoke text-center">No data yet.</td></tr>
             )}
           </tbody>
         </table>
@@ -174,7 +177,7 @@ function ArticlesTab() {
   const [form, setForm] = useState({ title: "", slug: "", category: "Editorial", excerpt: "", body: "", cover_image: "", author: "AINTRIX Editorial", published: true });
   const [msg, setMsg] = useState("");
 
-  const load = () => api.get("/admin/articles").then((r) => setRows(r.data || []));
+  const load = () => api.get("/admin/articles").then((r) => setRows(Array.isArray(r.data) ? r.data : []));
   useEffect(() => { load(); }, []);
 
   const create = async (e) => {
@@ -195,6 +198,8 @@ function ArticlesTab() {
     await api.delete(`/admin/articles/${id}`);
     load();
   };
+
+  const rowList = Array.isArray(rows) ? rows : [];
 
   return (
     <div data-testid="articles-panel">
@@ -219,7 +224,7 @@ function ArticlesTab() {
       </form>
 
       <div className="border border-graphite" data-testid="articles-table">
-        {rows.map((a) => (
+        {rowList.map((a) => (
           <div key={a.id} className="grid grid-cols-12 items-center gap-4 px-4 py-3 border-b border-graphite">
             <div className="col-span-6 truncate">{a.title}</div>
             <div className="col-span-3 text-xs uppercase tracking-[0.2em] text-smoke">{a.category}</div>
@@ -229,7 +234,7 @@ function ArticlesTab() {
             </div>
           </div>
         ))}
-        {rows.length === 0 && <div className="p-6 text-smoke text-sm">No articles.</div>}
+        {rowList.length === 0 && <div className="p-6 text-smoke text-sm">No articles.</div>}
       </div>
     </div>
   );
@@ -240,14 +245,14 @@ function JobsTab() {
   const [form, setForm] = useState({ title: "", department: "", location: "", type: "Full-time", description: "", requirements: "", published: true });
   const [msg, setMsg] = useState("");
 
-  const load = () => api.get("/admin/jobs").then((r) => setRows(r.data || []));
+  const load = () => api.get("/admin/jobs").then((r) => setRows(Array.isArray(r.data) ? r.data : []));
   useEffect(() => { load(); }, []);
 
   const create = async (e) => {
     e.preventDefault();
     setMsg("");
     try {
-      await api.post("/admin/jobs", { ...form, requirements: form.requirements.split("\n").map((s) => s.trim()).filter(Boolean) });
+      await api.post("/admin/jobs", { ...form, requirements: (form.requirements || "").split("\n").map((s) => s.trim()).filter(Boolean) });
       setMsg("Created.");
       setForm({ title: "", department: "", location: "", type: "Full-time", description: "", requirements: "", published: true });
       load();
@@ -261,6 +266,8 @@ function JobsTab() {
     await api.delete(`/admin/jobs/${id}`);
     load();
   };
+
+  const rowList = Array.isArray(rows) ? rows : [];
 
   return (
     <div data-testid="jobs-panel">
@@ -281,7 +288,7 @@ function JobsTab() {
       </form>
 
       <div className="border border-graphite">
-        {rows.map((j) => (
+        {rowList.map((j) => (
           <div key={j.id} className="grid grid-cols-12 items-center gap-4 px-4 py-3 border-b border-graphite">
             <div className="col-span-5 truncate">{j.title}</div>
             <div className="col-span-3 text-xs uppercase tracking-[0.2em] text-smoke">{j.department}</div>
@@ -291,7 +298,7 @@ function JobsTab() {
             </div>
           </div>
         ))}
-        {rows.length === 0 && <div className="p-6 text-smoke text-sm">No jobs.</div>}
+        {rowList.length === 0 && <div className="p-6 text-smoke text-sm">No jobs.</div>}
       </div>
     </div>
   );

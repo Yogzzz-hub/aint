@@ -12,7 +12,7 @@ export default function Careers() {
   const [activeJob, setActiveJob] = useState(null);
 
   useEffect(() => {
-    api.get("/jobs").then((r) => setJobs(r.data || [])).catch(() => setJobs([]));
+    api.get("/jobs").then((r) => setJobs(Array.isArray(r.data) ? r.data : [])).catch(() => setJobs([]));
   }, []);
 
   const cards = [
@@ -37,6 +37,8 @@ export default function Careers() {
       text: "Technology never stands still. We encourage continuous learning, experimentation, and the courage to explore what comes next."
     }
   ];
+
+  const jobsList = Array.isArray(jobs) ? jobs : [];
 
   return (
     <div className="pt-32">
@@ -63,13 +65,13 @@ export default function Careers() {
             <div>
               <div className="text-xs uppercase tracking-[0.25em] text-smoke mb-4">Open Roles</div>
               <h2 className="font-display text-4xl md:text-6xl tracking-crush leading-[0.95]">
-                {jobs.length} positions open.
+                {jobsList.length} positions open.
               </h2>
             </div>
           </div>
 
           <div className="border-t border-graphite">
-            {jobs.map((j, i) => (
+            {jobsList.map((j, i) => (
               <motion.button
                 key={j.id}
                 onClick={() => setActiveJob(j)}
@@ -88,7 +90,7 @@ export default function Careers() {
                 <div className="md:col-span-1 text-smoke text-sm self-center">{j.type}</div>
               </motion.button>
             ))}
-            {jobs.length === 0 && <div className="py-8 text-smoke text-sm">No roles listed yet — check back soon.</div>}
+            {jobsList.length === 0 && <div className="py-8 text-smoke text-sm">No roles listed yet — check back soon.</div>}
           </div>
         </div>
       </section>

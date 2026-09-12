@@ -7,8 +7,10 @@ export default function Research() {
   const [items, setItems] = useState([]);
 
   useEffect(() => {
-    api.get("/research").then((r) => setItems(r.data || [])).catch(() => setItems([]));
+    api.get("/research").then((r) => setItems(Array.isArray(r.data) ? r.data : [])).catch(() => setItems([]));
   }, []);
+
+  const itemList = Array.isArray(items) ? items : [];
 
   return (
     <div className="pt-32">
@@ -28,7 +30,7 @@ export default function Research() {
 
       <section className="border-t border-graphite py-16" data-testid="research-list">
         <div className="max-w-[1600px] mx-auto px-6 md:px-10 grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
-          {items.map((r, i) => (
+          {itemList.map((r, i) => (
             <motion.article
               key={r.id}
               initial={{ opacity: 0, y: 40 }}
@@ -54,7 +56,7 @@ export default function Research() {
               </div>
             </motion.article>
           ))}
-          {items.length === 0 && (
+          {itemList.length === 0 && (
             <div className="col-span-full text-smoke text-sm">No research posts yet.</div>
           )}
         </div>
