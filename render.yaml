@@ -2,17 +2,16 @@
 # This file defines how to deploy both backend services
 
 services:
-  # Backend API Service (Python/FastAPI)
+  # Backend API Service (Python/FastAPI via Docker)
   - type: web
     name: aintrix-backend
-    runtime: python
-    runtimeVersion: "3.11"
+    runtime: docker
     region: oregon
     plan: starter # $7/month - 0.5 CPU, 512 MB RAM
     branch: main
     rootDir: backend
-    buildCommand: python3.11 -m pip install --upgrade pip setuptools wheel && python3.11 -m pip install -r requirements.txt --prefer-binary
-    startCommand: python3.11 -m uvicorn server:app --host 0.0.0.0 --port $PORT
+    dockerfilePath: ./Dockerfile
+    dockerContext: ./
     healthCheckPath: /api/health
     envVars:
       - key: DATABASE_URL
