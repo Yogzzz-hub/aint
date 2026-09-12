@@ -5,8 +5,8 @@ A multi-sector innovation company building intelligent technologies, creative in
 ## 🚀 Tech Stack
 
 - **Frontend**: React 18, TailwindCSS, Framer Motion, Three.js, GSAP
-- **Backend**: FastAPI (Python), PostgreSQL, JWT Auth
-- **Deployment**: Vercel (Frontend), Railway/Render (Backend + DB)
+- **Backend**: FastAPI (Python), PostgreSQL (Supabase), JWT Auth
+- **Deployment**: Vercel (Frontend), Railway/Render (Backend), Supabase (Database)
 
 ## 📖 Quick Start
 
@@ -15,18 +15,26 @@ See [SETUP.md](./SETUP.md) for detailed local development instructions.
 ### Prerequisites
 - Node.js 18+
 - Python 3.10+
-- PostgreSQL 14+
+- Supabase account (or local PostgreSQL 14+)
+
+### Database Setup
+
+**Option A: Supabase (Recommended)**
+See [SUPABASE_SETUP.md](./SUPABASE_SETUP.md) for complete guide.
+
+**Option B: Local PostgreSQL**
+```bash
+psql -U postgres -d aintrix -f backend/schema.sql
+psql -U postgres -d aintrix -f backend/seed.sql
+```
 
 ### Backend
 ```bash
 cd backend
 pip install -r requirements.txt
-psql -U postgres -d aintrix -f schema.sql
-psql -U postgres -d aintrix -f seed.sql
+# Database is already set up on Supabase
 python -m uvicorn server:app --reload --port 8000
 ```
-
-### Frontend
 ```bash
 cd frontend
 npm install

@@ -6,7 +6,9 @@ This guide will help you set up the AINTRIX project locally on Windows.
 
 1. **Node.js** (v18 or higher) - [Download](https://nodejs.org/)
 2. **Python** (v3.10 or higher) - [Download](https://www.python.org/downloads/)
-3. **PostgreSQL** (v14 or higher) - [Download](https://www.postgresql.org/download/windows/)
+3. **Database** - Choose one:
+   - **Supabase** (Recommended - Cloud PostgreSQL) - See [SUPABASE_SETUP.md](./SUPABASE_SETUP.md)
+   - **Local PostgreSQL** (v14 or higher) - [Download](https://www.postgresql.org/download/windows/)
 
 ## Step 1: Clone the Repository
 
@@ -15,7 +17,19 @@ git clone https://github.com/Yogzzz-hub/aint.git
 cd aint
 ```
 
-## Step 2: Set Up PostgreSQL Database
+## Step 2: Set Up Database
+
+### Option A: Supabase (Recommended - No Local Install)
+
+Supabase provides a managed PostgreSQL database in the cloud. **See [SUPABASE_SETUP.md](./SUPABASE_SETUP.md) for detailed instructions.**
+
+Quick steps:
+1. You already have a Supabase project
+2. Get your connection string from Supabase Dashboard
+3. Update `backend\.env` with the connection string
+4. Run: `cd backend; .\setup_supabase.ps1` (or use Supabase SQL Editor)
+
+### Option B: Local PostgreSQL
 
 ### Install PostgreSQL
 
