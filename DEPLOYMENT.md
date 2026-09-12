@@ -64,9 +64,9 @@ Your Supabase PostgreSQL database is already set up:
    Region: Oregon (US West)
    Branch: main
    Root Directory: backend
-   Runtime: Python 3
-   Build Command: pip install -r requirements.txt
-   Start Command: uvicorn server:app --host 0.0.0.0 --port $PORT
+   Runtime: Docker
+   Dockerfile Path: ./Dockerfile
+   Docker Context: ./
    Instance Type: Starter ($7/month)
    ```
 
