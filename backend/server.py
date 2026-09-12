@@ -1,4 +1,4 @@
-"""AINTRIX Global — FastAPI backend
+"""AINTRIX Global — FastAPI backend with PostgreSQL
 Handles: JWT auth, contacts, careers, internships, investor leads,
 news CMS, research posts, and admin dashboard APIs.
 """
@@ -11,14 +11,14 @@ import uuid
 import bcrypt
 import jwt as pyjwt
 from datetime import datetime, timezone, timedelta
-from typing import Optional, List, Annotated
-from bson import ObjectId
+from typing import Optional, List
+import json
 
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, Request, UploadFile, File, Form
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, Request, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, EmailStr, Field, BeforeValidator
-from motor.motor_asyncio import AsyncIOMotorClient
+from pydantic import BaseModel, EmailStr, Field
+import asyncpg
 
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -28,18 +28,17 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak
 from reportlab.pdfgen import canvas as pdfcanvas
 
 # -----------------------------------------------------------------------------
-# App + DB setup
+# Config
 # -----------------------------------------------------------------------------
-MONGO_URL = os.environ["MONGO_URL"]
-DB_NAME = os.environ["DB_NAME"]
+DATABASE_URL = os.environ["DATABASE_URL"]
 JWT_SECRET = os.environ["JWT_SECRET"]
 JWT_ALG = "HS256"
-ACCESS_TTL_MIN = 60 * 24  # 24h — admin sessions
+ACCESS_TTL_MIN = 60 * 24  # 24h
 
-client = AsyncIOMotorClient(MONGO_URL)
-db = client[DB_NAME]
+# Database connection pool
+db_pool: Optional[asyncpg.Pool] = None
 
-app = FastAPI(title="AINTRIX Global API", version="1.0.0")
+app = FastAPI(title="AINTRIX Global API", version="2.0.0")
 api = APIRouter(prefix="/api")
 
 app.add_middleware(
@@ -51,10 +50,32 @@ app.add_middleware(
 )
 
 # -----------------------------------------------------------------------------
-# Helpers
+# Database helpers
 # -----------------------------------------------------------------------------
-PyObjectId = Annotated[str, BeforeValidator(lambda x: str(x) if isinstance(x, ObjectId) else x)]
+async def get_db():
+    """Get database connection from pool"""
+    if db_pool is None:
+        raise HTTPException(status_code=500, detail="Database not initialized")
+    async with db_pool.acquire() as conn:
+        yield conn
 
+def serialize_record(record: asyncpg.Record) -> dict:
+    """Convert asyncpg Record to dict with proper serialization"""
+    if not record:
+        return {}
+    result = dict(record)
+    for key, value in result.items():
+        if isinstance(value, datetime):
+            result[key] = value.isoformat()
+    return result
+
+def serialize_records(records: List[asyncpg.Record]) -> List[dict]:
+    """Convert list of Records to list of dicts"""
+    return [serialize_record(r) for r in records]
+
+# -----------------------------------------------------------------------------
+# Auth helpers
+# -----------------------------------------------------------------------------
 def now_utc() -> datetime:
     return datetime.now(timezone.utc)
 
@@ -67,28 +88,16 @@ def verify_password(pw: str, hashed: str) -> bool:
     except Exception:
         return False
 
-def create_access_token(user_id: str, email: str) -> str:
+def create_access_token(user_id: int, email: str) -> str:
     payload = {
-        "sub": user_id,
+        "sub": str(user_id),
         "email": email,
         "exp": now_utc() + timedelta(minutes=ACCESS_TTL_MIN),
         "type": "access",
     }
     return pyjwt.encode(payload, JWT_SECRET, algorithm=JWT_ALG)
 
-def serialize(doc: dict) -> dict:
-    if not doc:
-        return doc
-    if "_id" in doc:
-        doc["id"] = str(doc.pop("_id"))
-    for k, v in list(doc.items()):
-        if isinstance(v, datetime):
-            doc[k] = v.isoformat()
-        if isinstance(v, ObjectId):
-            doc[k] = str(v)
-    return doc
-
-async def get_current_admin(request: Request) -> dict:
+async def get_current_admin(request: Request, conn = Depends(get_db)) -> dict:
     auth = request.headers.get("Authorization", "")
     token = auth[7:] if auth.startswith("Bearer ") else None
     if not token:
@@ -99,11 +108,14 @@ async def get_current_admin(request: Request) -> dict:
         raise HTTPException(status_code=401, detail="Token expired")
     except pyjwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid token")
-    user = await db.users.find_one({"_id": ObjectId(payload["sub"])})
-    if not user or user.get("role") != "admin":
+    
+    user = await conn.fetchrow("SELECT * FROM users WHERE id = $1", int(payload["sub"]))
+    if not user or user["role"] != "admin":
         raise HTTPException(status_code=403, detail="Admin access required")
-    user.pop("password_hash", None)
-    return serialize(user)
+    
+    user_dict = serialize_record(user)
+    user_dict.pop("password_hash", None)
+    return user_dict
 
 # -----------------------------------------------------------------------------
 # Models
@@ -170,223 +182,68 @@ class JobIn(BaseModel):
     title: str
     department: str
     location: str
-    type: str  # Full-time / Part-time / Contract
+    type: str
     description: str
     requirements: List[str] = []
     published: bool = True
 
 # -----------------------------------------------------------------------------
-# Startup — seed admin + indexes + demo content
+# Startup & Shutdown
 # -----------------------------------------------------------------------------
-DEMO_JOBS = [
-    {
-        "title": "Senior AI Research Engineer",
-        "department": "Artificial Intelligence",
-        "location": "Remote / Bangalore",
-        "type": "Full-time",
-        "description": "Lead applied research in foundation models, agentic systems, and multimodal reasoning across the AINTRIX AI division.",
-        "requirements": [
-            "PhD or MS in ML / CS with 5+ years applied research",
-            "Deep understanding of transformer architectures",
-            "Publications at NeurIPS / ICML / ICLR preferred",
-            "Fluent in PyTorch, JAX, or equivalent",
-        ],
-        "published": True,
-    },
-    {
-        "title": "Semiconductor Design Engineer",
-        "department": "Semiconductor Technology",
-        "location": "Bangalore",
-        "type": "Full-time",
-        "description": "Drive RTL to GDSII flow for AINTRIX proprietary silicon. Own architecture through tape-out.",
-        "requirements": [
-            "Bachelors / Masters in ECE / VLSI",
-            "6+ years RTL design, DFT, synthesis",
-            "Experience with 7nm / 5nm nodes advantageous",
-        ],
-        "published": True,
-    },
-    {
-        "title": "Creative Director — RYZE",
-        "department": "Creative Infrastructure",
-        "location": "Mumbai / Remote",
-        "type": "Full-time",
-        "description": "Lead brand and creative direction across RYZE's client and internal portfolios. Editorial-first, media-native, technology-fluent.",
-        "requirements": [
-            "10+ years brand and design leadership",
-            "Portfolio spanning identity, motion, and product",
-            "Comfortable in ambiguity, obsessive about craft",
-        ],
-        "published": True,
-    },
-    {
-        "title": "Robotics Systems Engineer",
-        "department": "Robotics & Automation",
-        "location": "Chennai",
-        "type": "Full-time",
-        "description": "Architect autonomous perception and manipulation stacks for AINTRIX robotics platforms.",
-        "requirements": [
-            "MS in Robotics / Mechatronics",
-            "ROS2, C++, and perception fluency",
-            "SLAM, sensor fusion, real-time systems",
-        ],
-        "published": True,
-    },
-    {
-        "title": "Full-Stack Engineer",
-        "department": "Information Technology",
-        "location": "Remote",
-        "type": "Full-time",
-        "description": "Build customer-facing platforms across AINTRIX's IT and creative properties.",
-        "requirements": [
-            "4+ years React / Node / Python",
-            "Systems thinking, product intuition",
-            "Bias for shipping",
-        ],
-        "published": True,
-    },
-]
-
-DEMO_ARTICLES = [
-    {
-        "title": "The AINTRIX Manifesto — Building the Century of Compound Innovation",
-        "slug": "aintrix-manifesto-century-of-compound-innovation",
-        "category": "Editorial",
-        "excerpt": "A future engineered across disciplines. Our commitment to a multi-sector, research-first company.",
-        "body": "AINTRIX Global was formed from a simple premise: the next century of technology will not belong to specialists. It will belong to the organizations that can move fluidly between silicon and cinema, between models and matter. This is our manifesto.\n\nWe do not build in isolation. Our AI research shapes our robotics stack. Our creative infrastructure amplifies our semiconductor narrative. Our food systems draw on our logistics discipline. Compound innovation is the point.\n\nDiscipline is the counterweight to velocity. Innovation without discipline cannot achieve sustainable success. Every decision at AINTRIX is measured against long-term durability — not quarterly optics.",
-        "cover_image": "https://images.unsplash.com/photo-1698429894841-64b7d0396aa7?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2MDV8MHwxfHNlYXJjaHwxfHxhYnN0cmFjdCUyMGdlb21ldHJpYyUyMDNkJTIwbW9ub2Nocm9tZXxlbnwwfHx8fDE3ODQ1NTgzMzN8MA&ixlib=rb-4.1.0&q=85",
-        "author": "AINTRIX Editorial",
-        "published": True,
-    },
-    {
-        "title": "RYZE Establishes Creative Infrastructure Division",
-        "slug": "ryze-establishes-creative-infrastructure-division",
-        "category": "Announcements",
-        "excerpt": "RYZE launches as AINTRIX's dedicated brand, media, and digital ecosystem partner for long-term growth.",
-        "body": "RYZE — established in 2024 — now sits at the intersection of technology, design, and media. Its role: shape brand narratives with the same rigor we apply to engineering. Every deliverable is a system.\n\nThe division works with founders and operators to compound distribution across product, design, and storytelling. Expect the RYZE portfolio to expand aggressively through 2026.",
-        "cover_image": "https://images.pexels.com/photos/13978499/pexels-photo-13978499.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
-        "author": "AINTRIX Newsroom",
-        "published": True,
-    },
-    {
-        "title": "Semiconductor Research: Progress Toward AINTRIX Silicon",
-        "slug": "semiconductor-research-progress-aintrix-silicon",
-        "category": "Research",
-        "excerpt": "A quiet update on our multi-year silicon program — from architecture to first tape-out plans.",
-        "body": "Since our patent work in 2022, AINTRIX has quietly built a semiconductor research group. We are pursuing domain-specific accelerators purpose-built for our AI and robotics stacks.\n\nThe program is deliberately long-horizon. We publish sparingly. We share here as a signal of intent, not a marketing exercise.",
-        "cover_image": "https://images.unsplash.com/photo-1763372278600-fd0b0997a7b8?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxODF8MHwxfHNlYXJjaHwzfHxzZW1pY29uZHVjdG9yJTIwbWljcm9jaGlwJTIwY2xvc2UlMjB1cCUyMG1vbm9jaHJvbWV8ZW58MHx8fHwxNzg0NTU4MzE4fDA&ixlib=rb-4.1.0&q=85",
-        "author": "Research Desk",
-        "published": True,
-    },
-]
-
-DEMO_RESEARCH = [
-    {
-        "title": "Foundation Models for Multi-Domain Agents",
-        "domain": "Artificial Intelligence",
-        "summary": "Investigating unified agentic architectures that generalize across enterprise, creative, and physical domains.",
-        "body": "Our AI research group is building foundation models tuned for AINTRIX's cross-domain deployment surface — from creative work at RYZE to robotics perception. The core hypothesis: shared representations across modalities compound utility faster than domain-siloed models.",
-        "cover_image": "https://images.pexels.com/photos/29054364/pexels-photo-29054364.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
-        "published": True,
-    },
-    {
-        "title": "Autonomous Manipulation for Industrial Robotics",
-        "domain": "Robotics & Automation",
-        "summary": "Closed-loop perception and manipulation on commodity hardware.",
-        "body": "We are exploring low-latency perception-to-action loops using multi-view stereo, contact-rich policy learning, and cost-optimized actuation.",
-        "cover_image": "https://images.pexels.com/photos/29054365/pexels-photo-29054365.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
-        "published": True,
-    },
-    {
-        "title": "Custom Silicon for Edge Inference",
-        "domain": "Semiconductor Technology",
-        "summary": "Sparse-attention accelerators targeting sub-watt edge inference for robotics and IoT.",
-        "body": "Architecture research on quantized sparse-attention silicon with programmable dataflow — targeting AINTRIX robotics and industrial IoT.",
-        "cover_image": "https://images.unsplash.com/photo-1561972465-05c968dc2c91?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxODF8MHwxfHNlYXJjaHwxfHxzZW1pY29uZHVjdG9yJTIwbWljcm9jaGlwJTIwY2xvc2UlMjB1cCUyMG1vbm9jaHJvbWV8ZW58MHx8fHwxNzg0NTU4MzE4fDA&ixlib=rb-4.1.0&q=85",
-        "published": True,
-    },
-    {
-        "title": "Sustainable Food Systems Pilot",
-        "domain": "Food Systems",
-        "summary": "Vertical, closed-loop cultivation with computer-vision quality control.",
-        "body": "A pilot program combining vertical farming, ML-driven yield forecasting, and closed-loop nutrient systems — designed to be replicable across urban centers.",
-        "cover_image": "https://images.unsplash.com/photo-1780273035805-9c3f782af91a?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NjZ8MHwxfHNlYXJjaHwxfHxpbmR1c3RyaWFsJTIwZW5naW5lZXJpbmclMjBtb25vY2hyb21lfGVufDB8fHx8MTc4Mjk2MTk4NXww&ixlib=rb-4.1.0&q=85",
-        "published": True,
-    },
-]
-
 @app.on_event("startup")
 async def on_startup():
-    # Indexes
-    await db.users.create_index("email", unique=True)
-    await db.articles.create_index("slug", unique=True)
-    await db.contacts.create_index("created_at")
-    await db.investor_leads.create_index("email")
+    global db_pool
+    db_pool = await asyncpg.create_pool(
+        DATABASE_URL,
+        min_size=2,
+        max_size=10,
+        command_timeout=60
+    )
+    print("✓ Database pool created")
 
-    # Seed admin (idempotent)
-    admin_email = os.environ.get("ADMIN_EMAIL", "admin@aintrix.com")
-    admin_password = os.environ.get("ADMIN_PASSWORD", "Aintrix@2026")
-    existing = await db.users.find_one({"email": admin_email})
-    if existing is None:
-        await db.users.insert_one({
-            "email": admin_email,
-            "password_hash": hash_password(admin_password),
-            "name": "AINTRIX Admin",
-            "role": "admin",
-            "created_at": now_utc(),
-        })
-    elif not verify_password(admin_password, existing.get("password_hash", "")):
-        await db.users.update_one(
-            {"email": admin_email},
-            {"$set": {"password_hash": hash_password(admin_password)}}
-        )
-
-    # Seed demo jobs
-    if await db.jobs.count_documents({}) == 0:
-        for j in DEMO_JOBS:
-            j2 = {**j, "created_at": now_utc()}
-            await db.jobs.insert_one(j2)
-
-    # Seed demo articles
-    for a in DEMO_ARTICLES:
-        if not await db.articles.find_one({"slug": a["slug"]}):
-            a2 = {**a, "created_at": now_utc(), "published_at": now_utc()}
-            await db.articles.insert_one(a2)
-
-    # Seed demo research
-    if await db.research.count_documents({}) == 0:
-        for r in DEMO_RESEARCH:
-            r2 = {**r, "created_at": now_utc()}
-            await db.research.insert_one(r2)
-
+@app.on_event("shutdown")
+async def on_shutdown():
+    global db_pool
+    if db_pool:
+        await db_pool.close()
+        print("✓ Database pool closed")
 
 # -----------------------------------------------------------------------------
 # Health
 # -----------------------------------------------------------------------------
 @api.get("/")
 async def root():
-    return {"status": "ok", "service": "AINTRIX Global API"}
+    return {"status": "ok", "service": "AINTRIX Global API", "version": "2.0.0"}
 
 @api.get("/health")
-async def health():
-    return {"ok": True, "ts": now_utc().isoformat()}
+async def health(conn = Depends(get_db)):
+    # Test DB connection
+    await conn.fetchval("SELECT 1")
+    return {"ok": True, "ts": now_utc().isoformat(), "db": "connected"}
 
 # -----------------------------------------------------------------------------
 # Auth
 # -----------------------------------------------------------------------------
 @api.post("/auth/login")
-async def login(payload: LoginIn):
+async def login(payload: LoginIn, conn = Depends(get_db)):
     email = payload.email.lower().strip()
-    user = await db.users.find_one({"email": email})
-    if not user or not verify_password(payload.password, user.get("password_hash", "")):
+    user = await conn.fetchrow("SELECT * FROM users WHERE email = $1", email)
+    
+    if not user or not verify_password(payload.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    if user.get("role") != "admin":
+    if user["role"] != "admin":
         raise HTTPException(status_code=403, detail="Admin access only")
-    token = create_access_token(str(user["_id"]), user["email"])
+    
+    token = create_access_token(user["id"], user["email"])
     return {
         "access_token": token,
         "token_type": "bearer",
-        "user": {"id": str(user["_id"]), "email": user["email"], "name": user.get("name"), "role": user.get("role")},
+        "user": {
+            "id": user["id"],
+            "email": user["email"],
+            "name": user["name"],
+            "role": user["role"]
+        },
     }
 
 @api.get("/auth/me")
@@ -397,27 +254,39 @@ async def me(admin=Depends(get_current_admin)):
 # Public — Contacts
 # -----------------------------------------------------------------------------
 @api.post("/contacts")
-async def submit_contact(payload: ContactIn):
-    doc = {
-        **payload.model_dump(),
-        "email": payload.email.lower().strip(),
-        "created_at": now_utc(),
-        "status": "new",
-    }
-    r = await db.contacts.insert_one(doc)
-    return {"ok": True, "id": str(r.inserted_id)}
+async def submit_contact(payload: ContactIn, conn = Depends(get_db)):
+    result = await conn.fetchrow(
+        """
+        INSERT INTO contacts (name, email, company, subject, message, status, created_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        RETURNING id
+        """,
+        payload.name,
+        payload.email.lower().strip(),
+        payload.company,
+        payload.subject,
+        payload.message,
+        "new",
+        now_utc()
+    )
+    return {"ok": True, "id": result["id"]}
 
 # -----------------------------------------------------------------------------
 # Public — Investor Leads + Deck download
 # -----------------------------------------------------------------------------
 @api.post("/investor-leads")
-async def submit_investor_lead(payload: InvestorLeadIn):
-    doc = {
-        **payload.model_dump(),
-        "email": payload.email.lower().strip(),
-        "created_at": now_utc(),
-    }
-    await db.investor_leads.insert_one(doc)
+async def submit_investor_lead(payload: InvestorLeadIn, conn = Depends(get_db)):
+    await conn.execute(
+        """
+        INSERT INTO investor_leads (name, email, company, role, created_at)
+        VALUES ($1, $2, $3, $4, $5)
+        """,
+        payload.name,
+        payload.email.lower().strip(),
+        payload.company,
+        payload.role,
+        now_utc()
+    )
     return {"ok": True, "download_url": "/api/investor-deck/download"}
 
 def _build_deck_pdf() -> io.BytesIO:
@@ -430,7 +299,6 @@ def _build_deck_pdf() -> io.BytesIO:
             self.rect(0, 0, letter[0], letter[1], fill=1, stroke=0)
             super().showPage()
 
-    # Build cover manually then flowables
     doc = SimpleDocTemplate(buf, pagesize=letter, leftMargin=0.75*inch, rightMargin=0.75*inch, topMargin=0.9*inch, bottomMargin=0.75*inch)
     styles = getSampleStyleSheet()
     cover = ParagraphStyle('cover', parent=styles['Title'], textColor=white, fontSize=42, leading=46, alignment=0)
@@ -464,7 +332,7 @@ def _build_deck_pdf() -> io.BytesIO:
 
     page("Vision &amp; Mission", [
         "Vision — To be a globally scalable innovation company building the future across industries.",
-        "Mission — Create long-term impact through technology, research, innovation, and responsible business development. Build solutions across multiple industries while maintaining sustainability and continuous innovation.",
+        "Mission — Create long-term impact through technology, research, innovation, and responsible business development.",
         "Philosophy — Innovation without discipline cannot achieve sustainable success.",
     ])
 
@@ -477,21 +345,6 @@ def _build_deck_pdf() -> io.BytesIO:
         "06 · Robotics &amp; Automation — Perception, manipulation, autonomy.",
         "07 · Logistics &amp; Trade — Global movement and market access.",
         "08 · Sustainable Food Systems — Closed-loop cultivation and distribution.",
-    ])
-
-    page("Journey", [
-        "2020 — Research begins.",
-        "2021 — Fast Forward Brand.",
-        "2022 — Patent acquisition and dedicated AI research.",
-        "2024 — RYZE established.",
-        "2025 — AINTRIX Global Private Limited incorporated.",
-    ])
-
-    page("Why AINTRIX", [
-        "Compound advantage — Multi-domain research and shared infrastructure across divisions.",
-        "Discipline — Long-horizon capital allocation; no quarterly noise.",
-        "Craft — Every product held to editorial standard.",
-        "Talent — Cross-disciplinary founders, engineers, designers, and researchers.",
     ])
 
     page("Contact", [
@@ -516,29 +369,66 @@ async def download_deck():
 # Public — Careers
 # -----------------------------------------------------------------------------
 @api.get("/jobs")
-async def list_jobs():
-    jobs = await db.jobs.find({"published": True}).sort("created_at", -1).to_list(200)
-    return [serialize(j) for j in jobs]
+async def list_jobs(conn = Depends(get_db)):
+    jobs = await conn.fetch(
+        "SELECT * FROM jobs WHERE published = true ORDER BY created_at DESC LIMIT 200"
+    )
+    return serialize_records(jobs)
 
 @api.post("/career-applications")
-async def submit_career(payload: CareerApplicationIn):
-    doc = {**payload.model_dump(), "email": payload.email.lower().strip(), "created_at": now_utc(), "status": "new"}
-    r = await db.career_applications.insert_one(doc)
-    return {"ok": True, "id": str(r.inserted_id)}
+async def submit_career(payload: CareerApplicationIn, conn = Depends(get_db)):
+    result = await conn.fetchrow(
+        """
+        INSERT INTO career_applications 
+        (full_name, email, phone, position, location, experience_years, linkedin, cover, resume_url, status, created_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        RETURNING id
+        """,
+        payload.full_name,
+        payload.email.lower().strip(),
+        payload.phone,
+        payload.position,
+        payload.location,
+        payload.experience_years,
+        payload.linkedin,
+        payload.cover,
+        payload.resume_url,
+        "new",
+        now_utc()
+    )
+    return {"ok": True, "id": result["id"]}
 
 # -----------------------------------------------------------------------------
 # Public — Internships
 # -----------------------------------------------------------------------------
 @api.post("/internships")
-async def submit_internship(payload: InternshipIn):
-    doc = {**payload.model_dump(), "email": payload.email.lower().strip(), "created_at": now_utc(), "status": "new"}
-    r = await db.internships.insert_one(doc)
-    return {"ok": True, "id": str(r.inserted_id)}
+async def submit_internship(payload: InternshipIn, conn = Depends(get_db)):
+    result = await conn.fetchrow(
+        """
+        INSERT INTO internships 
+        (full_name, email, phone, university, program, year, interest, portfolio, cover, resume_url, status, created_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        RETURNING id
+        """,
+        payload.full_name,
+        payload.email.lower().strip(),
+        payload.phone,
+        payload.university,
+        payload.program,
+        payload.year,
+        payload.interest,
+        payload.portfolio,
+        payload.cover,
+        payload.resume_url,
+        "new",
+        now_utc()
+    )
+    return {"ok": True, "id": result["id"]}
 
 # -----------------------------------------------------------------------------
 # Public — File upload (resumes)
 # -----------------------------------------------------------------------------
-UPLOAD_DIR = "/app/backend/uploads"
+UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 @api.post("/uploads/resume")
@@ -566,104 +456,171 @@ async def get_resume(fid: str):
 # Public — News & Research read
 # -----------------------------------------------------------------------------
 @api.get("/articles")
-async def list_articles(category: Optional[str] = None):
-    q = {"published": True}
+async def list_articles(category: Optional[str] = None, conn = Depends(get_db)):
     if category and category != "All":
-        q["category"] = category
-    items = await db.articles.find(q).sort("published_at", -1).to_list(200)
-    return [serialize(a) for a in items]
+        articles = await conn.fetch(
+            "SELECT * FROM articles WHERE published = true AND category = $1 ORDER BY published_at DESC LIMIT 200",
+            category
+        )
+    else:
+        articles = await conn.fetch(
+            "SELECT * FROM articles WHERE published = true ORDER BY published_at DESC LIMIT 200"
+        )
+    return serialize_records(articles)
 
 @api.get("/articles/{slug}")
-async def get_article(slug: str):
-    a = await db.articles.find_one({"slug": slug, "published": True})
-    if not a:
+async def get_article(slug: str, conn = Depends(get_db)):
+    article = await conn.fetchrow(
+        "SELECT * FROM articles WHERE slug = $1 AND published = true",
+        slug
+    )
+    if not article:
         raise HTTPException(status_code=404, detail="Article not found")
-    return serialize(a)
+    return serialize_record(article)
 
 @api.get("/research")
-async def list_research():
-    items = await db.research.find({"published": True}).sort("created_at", -1).to_list(200)
-    return [serialize(x) for x in items]
+async def list_research(conn = Depends(get_db)):
+    research = await conn.fetch(
+        "SELECT * FROM research WHERE published = true ORDER BY created_at DESC LIMIT 200"
+    )
+    return serialize_records(research)
 
 # -----------------------------------------------------------------------------
 # Admin — dashboard read + write
 # -----------------------------------------------------------------------------
 @api.get("/admin/stats")
-async def admin_stats(admin=Depends(get_current_admin)):
-    return {
-        "contacts": await db.contacts.count_documents({}),
-        "investor_leads": await db.investor_leads.count_documents({}),
-        "career_applications": await db.career_applications.count_documents({}),
-        "internships": await db.internships.count_documents({}),
-        "articles": await db.articles.count_documents({}),
-        "jobs": await db.jobs.count_documents({}),
-    }
+async def admin_stats(admin=Depends(get_current_admin), conn = Depends(get_db)):
+    stats = {}
+    stats["contacts"] = await conn.fetchval("SELECT COUNT(*) FROM contacts")
+    stats["investor_leads"] = await conn.fetchval("SELECT COUNT(*) FROM investor_leads")
+    stats["career_applications"] = await conn.fetchval("SELECT COUNT(*) FROM career_applications")
+    stats["internships"] = await conn.fetchval("SELECT COUNT(*) FROM internships")
+    stats["articles"] = await conn.fetchval("SELECT COUNT(*) FROM articles")
+    stats["jobs"] = await conn.fetchval("SELECT COUNT(*) FROM jobs")
+    return stats
 
 @api.get("/admin/contacts")
-async def admin_contacts(admin=Depends(get_current_admin)):
-    items = await db.contacts.find({}).sort("created_at", -1).to_list(500)
-    return [serialize(x) for x in items]
+async def admin_contacts(admin=Depends(get_current_admin), conn = Depends(get_db)):
+    contacts = await conn.fetch("SELECT * FROM contacts ORDER BY created_at DESC LIMIT 500")
+    return serialize_records(contacts)
 
 @api.get("/admin/investor-leads")
-async def admin_investor_leads(admin=Depends(get_current_admin)):
-    items = await db.investor_leads.find({}).sort("created_at", -1).to_list(500)
-    return [serialize(x) for x in items]
+async def admin_investor_leads(admin=Depends(get_current_admin), conn = Depends(get_db)):
+    leads = await conn.fetch("SELECT * FROM investor_leads ORDER BY created_at DESC LIMIT 500")
+    return serialize_records(leads)
 
 @api.get("/admin/career-applications")
-async def admin_career_apps(admin=Depends(get_current_admin)):
-    items = await db.career_applications.find({}).sort("created_at", -1).to_list(500)
-    return [serialize(x) for x in items]
+async def admin_career_apps(admin=Depends(get_current_admin), conn = Depends(get_db)):
+    apps = await conn.fetch("SELECT * FROM career_applications ORDER BY created_at DESC LIMIT 500")
+    return serialize_records(apps)
 
 @api.get("/admin/internships")
-async def admin_internships(admin=Depends(get_current_admin)):
-    items = await db.internships.find({}).sort("created_at", -1).to_list(500)
-    return [serialize(x) for x in items]
+async def admin_internships(admin=Depends(get_current_admin), conn = Depends(get_db)):
+    internships = await conn.fetch("SELECT * FROM internships ORDER BY created_at DESC LIMIT 500")
+    return serialize_records(internships)
 
 @api.get("/admin/articles")
-async def admin_articles(admin=Depends(get_current_admin)):
-    items = await db.articles.find({}).sort("created_at", -1).to_list(500)
-    return [serialize(x) for x in items]
+async def admin_articles(admin=Depends(get_current_admin), conn = Depends(get_db)):
+    articles = await conn.fetch("SELECT * FROM articles ORDER BY created_at DESC LIMIT 500")
+    return serialize_records(articles)
 
 @api.post("/admin/articles")
-async def admin_create_article(payload: ArticleIn, admin=Depends(get_current_admin)):
-    doc = payload.model_dump()
-    if await db.articles.find_one({"slug": doc["slug"]}):
+async def admin_create_article(payload: ArticleIn, admin=Depends(get_current_admin), conn = Depends(get_db)):
+    # Check slug uniqueness
+    existing = await conn.fetchval("SELECT id FROM articles WHERE slug = $1", payload.slug)
+    if existing:
         raise HTTPException(status_code=400, detail="Slug already exists")
-    doc.update({"created_at": now_utc(), "published_at": now_utc() if doc.get("published") else None})
-    r = await db.articles.insert_one(doc)
-    return {"ok": True, "id": str(r.inserted_id)}
+    
+    published_at = now_utc() if payload.published else None
+    
+    result = await conn.fetchrow(
+        """
+        INSERT INTO articles (title, slug, category, excerpt, body, cover_image, author, published, created_at, published_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        RETURNING id
+        """,
+        payload.title,
+        payload.slug,
+        payload.category,
+        payload.excerpt,
+        payload.body,
+        payload.cover_image,
+        payload.author,
+        payload.published,
+        now_utc(),
+        published_at
+    )
+    return {"ok": True, "id": result["id"]}
 
 @api.put("/admin/articles/{article_id}")
-async def admin_update_article(article_id: str, payload: ArticleIn, admin=Depends(get_current_admin)):
-    doc = payload.model_dump()
-    existing = await db.articles.find_one({"_id": ObjectId(article_id)})
+async def admin_update_article(article_id: int, payload: ArticleIn, admin=Depends(get_current_admin), conn = Depends(get_db)):
+    existing = await conn.fetchrow("SELECT * FROM articles WHERE id = $1", article_id)
     if not existing:
         raise HTTPException(status_code=404, detail="Not found")
-    if doc.get("published") and not existing.get("published"):
-        doc["published_at"] = now_utc()
-    await db.articles.update_one({"_id": ObjectId(article_id)}, {"$set": doc})
+    
+    published_at = existing["published_at"]
+    if payload.published and not existing["published"]:
+        published_at = now_utc()
+    
+    await conn.execute(
+        """
+        UPDATE articles 
+        SET title = $1, slug = $2, category = $3, excerpt = $4, body = $5, 
+            cover_image = $6, author = $7, published = $8, published_at = $9
+        WHERE id = $10
+        """,
+        payload.title,
+        payload.slug,
+        payload.category,
+        payload.excerpt,
+        payload.body,
+        payload.cover_image,
+        payload.author,
+        payload.published,
+        published_at,
+        article_id
+    )
     return {"ok": True}
 
 @api.delete("/admin/articles/{article_id}")
-async def admin_delete_article(article_id: str, admin=Depends(get_current_admin)):
-    await db.articles.delete_one({"_id": ObjectId(article_id)})
+async def admin_delete_article(article_id: int, admin=Depends(get_current_admin), conn = Depends(get_db)):
+    await conn.execute("DELETE FROM articles WHERE id = $1", article_id)
     return {"ok": True}
 
 @api.get("/admin/jobs")
-async def admin_jobs(admin=Depends(get_current_admin)):
-    items = await db.jobs.find({}).sort("created_at", -1).to_list(500)
-    return [serialize(x) for x in items]
+async def admin_jobs(admin=Depends(get_current_admin), conn = Depends(get_db)):
+    jobs = await conn.fetch("SELECT * FROM jobs ORDER BY created_at DESC LIMIT 500")
+    return serialize_records(jobs)
 
 @api.post("/admin/jobs")
-async def admin_create_job(payload: JobIn, admin=Depends(get_current_admin)):
-    doc = {**payload.model_dump(), "created_at": now_utc()}
-    r = await db.jobs.insert_one(doc)
-    return {"ok": True, "id": str(r.inserted_id)}
+async def admin_create_job(payload: JobIn, admin=Depends(get_current_admin), conn = Depends(get_db)):
+    result = await conn.fetchrow(
+        """
+        INSERT INTO jobs (title, department, location, type, description, requirements, published, created_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        RETURNING id
+        """,
+        payload.title,
+        payload.department,
+        payload.location,
+        payload.type,
+        payload.description,
+        json.dumps(payload.requirements),
+        payload.published,
+        now_utc()
+    )
+    return {"ok": True, "id": result["id"]}
 
 @api.delete("/admin/jobs/{job_id}")
-async def admin_delete_job(job_id: str, admin=Depends(get_current_admin)):
-    await db.jobs.delete_one({"_id": ObjectId(job_id)})
+async def admin_delete_job(job_id: int, admin=Depends(get_current_admin), conn = Depends(get_db)):
+    await conn.execute("DELETE FROM jobs WHERE id = $1", job_id)
     return {"ok": True}
 
-
+# -----------------------------------------------------------------------------
+# Mount API router
+# -----------------------------------------------------------------------------
 app.include_router(api)
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
