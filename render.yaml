@@ -1,0 +1,32 @@
+# Render Blueprint Configuration for AINTRIX
+# This file defines how to deploy both backend services
+
+services:
+  # Backend API Service (Python/FastAPI)
+  - type: web
+    name: aintrix-backend
+    runtime: python
+    region: oregon
+    plan: starter # $7/month - 0.5 CPU, 512 MB RAM
+    branch: main
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL
+        sync: false # Set manually in Render dashboard
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ADMIN_EMAIL
+        value: admin@aintrix.com
+      - key: ADMIN_PASSWORD
+        sync: false # Set manually for security
+      - key: SUPABASE_URL
+        value: https://jdumocczbdtlogclerbi.supabase.co
+      - key: SUPABASE_ANON_KEY
+        value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkdW1vY2N6YmR0bG9nY2xlcmJpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkxOTY5MTMsImV4cCI6MjEwNDc3MjkxM30.XcaJ2XExnipRt4wXXvhbDEZhNPD0s0-Izl3PekjDmoo
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false # Set manually for security
+      - key: PYTHON_VERSION
+        value: 3.11.0
